@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     try {
         const session = await prisma.soSession.findUnique({
             where: { id: params.id },
@@ -35,8 +36,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
+
     try {
         await prisma.soSession.delete({
             where: { id: params.id }

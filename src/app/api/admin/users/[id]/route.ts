@@ -4,8 +4,10 @@ import { prisma } from '@/lib/prisma';
 // UPDATE User (Password/Role)
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
+
     try {
         const { password, role } = await request.json();
         const data: any = {};
@@ -18,22 +20,24 @@ export async function PATCH(
         });
 
         return NextResponse.json({ success: true, user });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    } catch (error: any
+            return NextResponse.json({ error: error.message }, { status: 500 });
 }
+    }
 
 // DELETE User
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        await prisma.user.delete({
-            where: { id: params.id }
-        });
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    { params }: { params: Promise<{ id: string }> }
+    
+        const { id } = await params;
+
+            try {
+    await prisma.user.delete({
+        where: { id: params.id }
+    });
+    return NextResponse.json({ success: true });
+} catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
 }
+        }

@@ -19,7 +19,8 @@ interface SoItem {
     remarks?: string;
 }
 
-export default function AdjustmentPage({ params }: { params: { id: string } }) {
+export default async function AdjustmentPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const router = useRouter();
     const [items, setItems] = useState<SoItem[]>([]);
     const [periodName, setPeriodName] = useState("");
