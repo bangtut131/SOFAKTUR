@@ -1,0 +1,27 @@
+=== FULL ACCURATE DATA VERIFICATION ===
+Timestamp: 2026-02-03T02:45:50.182Z
+
+Total Branches: 4
+
+
+=== Kantor Pusat SMG (ID: 50) ===
+  Page 1: 83 invoices, Rp 1.010.565.375
+  BRANCH TOTAL: 83 invoices, Rp 1.010.565.375
+
+=== Busdev (ID: 250) ===
+  Page 1: 2 invoices, Rp 2.994.000
+  BRANCH TOTAL: 2 invoices, Rp 2.994.000
+
+=== Cabang NTB (ID: 150) ===
+  Page 1: 14 invoices, Rp 84.887.160
+  BRANCH TOTAL: 14 invoices, Rp 84.887.160
+
+=== Cabang NTT (ID: 350) ===
+  Page 1: No more data
+  BRANCH TOTAL: 0 invoices, Rp 0
+
+
+========== GRAND TOTAL ==========
+Total Invoices: 99
+Total Outstanding: Rp 1.098.446.535
+================================

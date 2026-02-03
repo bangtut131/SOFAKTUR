@@ -1,0 +1,28 @@
+=== ACCURATE DATA VERIFICATION ===
+Timestamp: 2026-02-03T02:44:49.432Z
+
+--- BRANCHES ---
+Total Branches: 4
+  - Kantor Pusat SMG (ID: 50)
+  - Busdev (ID: 250)
+  - Cabang NTB (ID: 150)
+  - Cabang NTT (ID: 350)
+
+--- UNPAID INVOICES PER BRANCH ---
+  Kantor Pusat SMG: 0 invoices
+    -> Page 1 Amount: Rp 1.010.565.375
+  Busdev: 0 invoices
+    -> Page 1 Amount: Rp 2.994.000
+  Cabang NTB: 0 invoices
+    -> Page 1 Amount: Rp 84.887.160
+  Cabang NTT: 0 invoices
+
+--- SUMMARY ---
+Total Branches: 4
+Total Unpaid Invoices (counted): 0
+Page 1 Amount Sample: Rp 1.098.446.535
+
+--- WITHOUT BRANCH FILTER ---
+Page 1 invoices: 99
+API totalCount: N/A
+Page 1 Amount: Rp 1.098.446.535

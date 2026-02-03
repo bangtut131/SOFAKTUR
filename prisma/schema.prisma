@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model SoSession {
+  id               String   @id @default(uuid())
+  periodName       String   // e.g. "Week 4 Jan 2026"
+  status           String   @default("OPEN") // OPEN, WAITING_APPROVAL, FINALIZED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Stats
+  totalItems       Int      @default(0)
+  totalValue       Float    @default(0)
+  
+  // Relations
+  items            SoItem[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String   // Plain text for simplicity per request, or hashed? Assuming simple first.
+  role      String   // ADMIN, FINANCE, STAFF
+  createdAt DateTime @default(now())
+}
+
+model RoleConfig {
+  id              String   @id @default(uuid())
+  role            String   @unique // ADMIN, FINANCE, STAFF
+  visibleColumns  String   @default("[]") // JSON string of visible column keys
+  canEditColumns  String   @default("[]") // JSON string of editable column keys
+}
+
+model SoItem {
+  id               String   @id @default(uuid())
+  sessionId        String
+  session          SoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  // Snapshot of Invoice Data
+  transNo          String
+  transDate        String
+  dueDate          String?
+  customerName     String
+  description      String?
+  statusName       String?
+  approvalStatus   String?
+  amount           Float
+  outstanding      Float
+  primeOwing       Float
+  
+  // SO Process Fields
+  scannedAt        DateTime?
+  status           String   @default("UNVERIFIED") // UNVERIFIED, MATCHED
+  existenceStatus  String?  // Ada, Hilang, Dibawa Sales
+  remarks          String?  // Keterangan Tambahan
+  notes            String?  // Validation notes (optional, keep for flexibility)
+  
+  @@index([sessionId])
+  @@index([transNo])
+}
+
+model Customer {
+  id            String   @id @default(uuid())
+  accurateId    String   @unique // ID from Accurate
+  name          String
+  contactPerson String?
+  phone         String?  // Main WA number
+  email         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  receivables   Receivable[]
+}
+
+model Receivable {
+  id              String   @id @default(uuid())
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  transNo         String
+  transDate       DateTime
+  dueDate         DateTime
+  amount          Float
+  outstanding     Float
+  
+  status          String   @default("OPEN") // OPEN, PAID
+  lastSyncedAt    DateTime @default(now())
+  
+  @@unique([transNo]) // Assume Invoice No is unique
+  @@index([customerId])
+}
+
+model BroadcastSchedule {
+  id              String   @id @default(uuid())
+  name            String   @unique // e.g. "Weekly Sync", "Friday Broadcast"
+  cronExpression  String   // e.g. "0 9 * * 1"
+  isEnabled       Boolean  @default(false)
+  type            String   // SYNC, BROADCAST
+  messageTemplate String?  // Only for BROADCAST
+  lastRun         DateTime?
+  nextRun         DateTime?
+  status          String   @default("IDLE") // IDLE, RUNNING
+}
+
+model BroadcastLog {
+  id              String   @id @default(uuid())
+  customerId      String
+  customerName    String
+  phone           String
+  message         String
+  sentAt          DateTime @default(now())
+  status          String   // PENDING, SENT, FAILED
+  error           String?
+  source          String   @default("SYSTEM") // SYSTEM, MANUAL
+}
+
+model SystemSetting {
+  key             String   @id
+  value           String
+  description     String?
+}

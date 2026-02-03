@@ -1,0 +1,28 @@
+=== RAW API TEST (NO FILTERS) ===
+Timestamp: 2026-02-03T03:33:20.711Z
+
+--- TEST 1: No primeOwing filter ---
+URL: https://zeus.accurate.id/accurate/api/sales-invoice/list.do?fields=id%2Cnumber%2Ccustomer%2CtotalAmount%2CprimeOwing%2Coutstanding%2CtransDate&sp.page=1&sp.pageSize=100
+Status: 200
+Total Count: N/A
+Page 1 Results: 1 invoices
+Page 1 primeOwing Sum: Rp 0
+
+First 5 invoices:
+  undefined: N/A - PrimeOwing: Rp 0
+
+--- TEST 2: Search for CV Abadi Prima ---
+URL: https://zeus.accurate.id/accurate/api/sales-invoice/list.do?fields=id%2Cnumber%2Ccustomer%2CtotalAmount%2CprimeOwing%2Coutstanding%2CtransDate&filter.keywords=Abadi+Prima&sp.page=1&sp.pageSize=100
+Status: 200
+Total Count: N/A
+Results: 1 invoices
+
+  undefined: N/A - PrimeOwing: Rp 0
+
+Total for Abadi Prima: Rp 0
+
+--- TEST 3: Get TOTAL invoice count (all) ---
+Total Invoices in Accurate: N/A
+
+--- TEST 4: Total count with primeOwing > 0 ---
+Invoices with primeOwing > 0: N/A

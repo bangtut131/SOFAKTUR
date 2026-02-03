@@ -1,0 +1,34 @@
+=== INVESTIGATE MISSING CUSTOMER ===
+Timestamp: 2026-02-03T03:31:24.373Z
+
+--- DATABASE SEARCH ---
+Found in DB: CV Abadi Prima
+  AccurateID: 38451
+  Phone: 082258692809
+  Receivables count: 0
+  Total Outstanding: Rp 0
+
+--- CURRENT DB STATS ---
+Total Outstanding in DB: Rp 1.098.366.535
+Open Receivables: 99
+Customers with Open Receivables: 78
+
+--- ACCURATE API SEARCH ---
+Branches: 4
+
+Branch: Kantor Pusat SMG
+  No Abadi Prima in page 1 (82 invoices)
+
+Branch: Busdev
+  No Abadi Prima in page 1 (2 invoices)
+
+Branch: Cabang NTB
+  No Abadi Prima in page 1 (14 invoices)
+
+Branch: Cabang NTT
+  No Abadi Prima in page 1 (0 invoices)
+
+--- FULL API TOTAL (All Pages) ---
+
+API Total Invoices: 98
+API Total Outstanding: Rp 1.098.331.535

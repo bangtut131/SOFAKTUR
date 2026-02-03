@@ -1,0 +1,79 @@
+=== TESTING ALTERNATIVE API ENDPOINTS ===
+Timestamp: 2026-02-03T03:42:17.198Z
+
+
+--- customer-invoice/list.do ---
+URL: https://zeus.accurate.id/accurate/api/customer-invoice/list.do?fields=id%2Cnumber%2Ccustomer%2CtotalAmount%2Coutstanding%2CtransDate&sp.page=1&sp.pageSize=10
+Status: 404
+Error: Unknown
+
+--- ar-invoice/list.do ---
+URL: https://zeus.accurate.id/accurate/api/ar-invoice/list.do?fields=id%2Cnumber%2Ccustomer%2Camount%2Coutstanding%2CtransDate&sp.page=1&sp.pageSize=10
+Status: 404
+Error: Unknown
+
+--- sales-invoice/list.do ---
+URL: https://zeus.accurate.id/accurate/api/sales-invoice/list.do?fields=id%2Cnumber%2Ccustomer%2CtotalAmount%2CprimeOwing%2Coutstanding%2CtransDate%2Cbranch&filter.primeOwing.op=GREATER_THAN&filter.primeOwing.val=0&sp.page=1&sp.pageSize=100
+Status: 200
+TotalCount: N/A
+Results: 100
+Sample: {
+  "number": "645.26.02.01890",
+  "totalAmount": 10951500,
+  "transDate": "03/02/2026",
+  "id": 133756,
+  "primeOwing": 10951500,
+  "branch": {
+    "phoneNumber": null,
+    "optLock": 5,
+    "defaultBranch": true,
+    "name": "Kantor Pusat SMG",
+    "id": 50,
+    "suspended": false
+  },
+  "transDateView": "03 Feb 2026",
+  "customer": {
+    "name": "CV. Murah Berkah Makmur",
+    "id": 40700,
+    "customerNo": "C.01277"
+  }
+}...
+
+--- sales-invoice/list.do ---
+URL: https://zeus.accurate.id/accurate/api/sales-invoice/list.do?fields=id%2Cnumber%2Ccustomer%2CtotalAmount%2CprimeOwing%2Coutstanding%2CtransDate%2Cbranch&filter.customer.name.op=LIKE&filter.customer.name.val=Abadi+Prima&sp.page=1&sp.pageSize=100
+Status: 200
+TotalCount: N/A
+Results: 100
+Sample: {
+  "number": "645.26.02.01890",
+  "totalAmount": 10951500,
+  "transDate": "03/02/2026",
+  "id": 133756,
+  "primeOwing": 10951500,
+  "branch": {
+    "phoneNumber": null,
+    "optLock": 5,
+    "defaultBranch": true,
+    "name": "Kantor Pusat SMG",
+    "id": 50,
+    "suspended": false
+  },
+  "transDateView": "03 Feb 2026",
+  "customer": {
+    "name": "CV. Murah Berkah Makmur",
+    "id": 40700,
+    "customerNo": "C.01277"
+  }
+}...
+
+--- customer/list.do ---
+URL: https://zeus.accurate.id/accurate/api/customer/list.do?fields=id%2Cname%2CmobilePhone%2Cemail&filter.name.op=LIKE&filter.name.val=Abadi+Prima&sp.page=1&sp.pageSize=10
+Status: 200
+TotalCount: N/A
+Results: 10
+Sample: {
+  "mobilePhone": "+62 858-1005-9029",
+  "name": "129 Sragi Pekalongan",
+  "id": 58801,
+  "email": null
+}...

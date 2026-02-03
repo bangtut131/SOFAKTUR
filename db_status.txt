@@ -1,0 +1,28 @@
+=== DEBUG DB CONTENT ===
+Total Customers: 2793
+Total Receivables: 457
+Open Receivables: 195
+Total Outstanding: Rp 1.700.714.350
+Customers with Open Receivables: 134
+Latest Receivable:
+{
+  "id": "7b555393-9214-40df-8f9b-1494343d71bf",
+  "customerId": "7b0f9183-0743-4b44-a241-0962041e2c2f",
+  "transNo": "645.26.02.01807",
+  "transDate": "2026-02-25T17:00:00.000Z",
+  "dueDate": "2026-02-25T17:00:00.000Z",
+  "amount": 590700,
+  "outstanding": 590700,
+  "status": "OPEN",
+  "lastSyncedAt": "2026-02-03T02:22:01.837Z",
+  "customer": {
+    "id": "7b0f9183-0743-4b44-a241-0962041e2c2f",
+    "accurateId": "TEMP-PT Gama Agro Sejati",
+    "name": "PT Gama Agro Sejati",
+    "contactPerson": "",
+    "phone": "",
+    "email": null,
+    "createdAt": "2026-02-02T03:25:21.518Z",
+    "updatedAt": "2026-02-02T03:25:21.518Z"
+  }
+}

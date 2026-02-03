@@ -1,0 +1,31 @@
+=== RAW API DIAGNOSTIC ===
+Timestamp: 2026-02-02T10:50:49.328Z
+
+--- BRANCHES ---
+Total Branches: 4
+  - Kantor Pusat SMG (ID: 50)
+  - Busdev (ID: 250)
+  - Cabang NTB (ID: 150)
+  - Cabang NTT (ID: 350)
+
+--- RAW INVOICE COUNTS PER BRANCH ---
+
+Branch: Kantor Pusat SMG (ID: 50)
+  Page 1: 85 invoices, Rp 373.098.669
+  BRANCH TOTAL: 85 invoices, Rp 373.098.669
+
+Branch: Busdev (ID: 250)
+  Page 1: 3 invoices, Rp 3.584.700
+  BRANCH TOTAL: 3 invoices, Rp 3.584.700
+
+Branch: Cabang NTB (ID: 150)
+  Page 1: 11 invoices, Rp 50.248.660
+  BRANCH TOTAL: 11 invoices, Rp 50.248.660
+
+Branch: Cabang NTT (ID: 350)
+  Page 1: 0 invoices
+  BRANCH TOTAL: 0 invoices, Rp 0
+
+--- GRAND TOTAL ---
+Total Invoices: 99
+Total Outstanding: Rp 426.932.029
