@@ -15,9 +15,10 @@ export async function POST(request: Request) {
         }
 
         // Simple cookie session
-        cookies().set('user_role', user.role);
-        cookies().set('user_id', user.id);
-        cookies().set('username', user.username);
+        const cookieStore = await cookies();
+        cookieStore.set('user_role', user.role);
+        cookieStore.set('user_id', user.id);
+        cookieStore.set('username', user.username);
 
         return NextResponse.json({ success: true, role: user.role });
     } catch (error: any) {

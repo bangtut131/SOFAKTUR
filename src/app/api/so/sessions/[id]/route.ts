@@ -18,7 +18,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         }
 
         // Get Role Config
-        const role = cookies().get('user_role')?.value || 'STAFF';
+        const cookieStore = await cookies();
+        const role = cookieStore.get('user_role')?.value || 'STAFF';
         const roleConfig = await prisma.roleConfig.findUnique({
             where: { role }
         });

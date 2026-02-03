@@ -8,7 +8,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const role = cookieStore.get('user_role')?.value || 'STAFF';
     const username = cookieStore.get('username')?.value || 'User';
 
