@@ -65,13 +65,18 @@ export const SchedulerService = {
 
             const result = await AccurateServerService.fetchCustomers(page);
             if (!result.customers || result.customers.length === 0) break;
-            for (const cust of result.customers) {
-                await prisma.customer.upsert({
-                    where: { accurateId: String(cust.id) },
-                    update: { name: cust.name, phone: cust.mobilePhone || cust.phone || null, email: cust.email || null, updatedAt: new Date() },
-                    create: { accurateId: String(cust.id), name: cust.name, phone: cust.mobilePhone || cust.phone || null, email: cust.email || null }
-                });
-                totalSynced++;
+            // Process customers in batches
+            const BATCH_SIZE = 20;
+            for (let i = 0; i < result.customers.length; i += BATCH_SIZE) {
+                const batch = result.customers.slice(i, i + BATCH_SIZE);
+                await Promise.all(batch.map(cust =>
+                    prisma.customer.upsert({
+                        where: { accurateId: String(cust.id) },
+                        update: { name: cust.name, phone: cust.mobilePhone || cust.phone || null, email: cust.email || null, updatedAt: new Date() },
+                        create: { accurateId: String(cust.id), name: cust.name, phone: cust.mobilePhone || cust.phone || null, email: cust.email || null }
+                    })
+                ));
+                totalSynced += batch.length;
             }
             console.log(`[SYNC] Synced ${totalSynced} customers (page ${page})...`);
             if (result.customers.length < 100) hasMore = false;
@@ -181,32 +186,75 @@ export const SchedulerService = {
                     }
 
                     if (res.invoices && res.invoices.length > 0) {
-                        for (const inv of res.invoices) {
-                            try {
-                                let customer = await prisma.customer.findUnique({ where: { accurateId: inv.customerAccurateId } });
-                                if (!customer) customer = await prisma.customer.findFirst({ where: { name: inv.customerName } });
-                                if (!customer) {
-                                    customer = await prisma.customer.create({ data: { accurateId: inv.customerAccurateId || `TEMP-${Date.now()}`, name: inv.customerName } });
-                                }
+                        // Optimization: Pre-fetch existing customers to reduce DB calls
+                        const uniqueAccurateIds = Array.from(new Set(res.invoices.map((inv: any) => inv.customerAccurateId).filter((id: string) => !!id))) as string[];
+                        const existingCustomers = await prisma.customer.findMany({
+                            where: { accurateId: { in: uniqueAccurateIds } }
+                        });
+                        const customerMap = new Map(existingCustomers.map(c => [c.accurateId, c]));
 
-                                await prisma.receivable.upsert({
-                                    where: { transNo: inv.transNo },
-                                    update: { outstanding: inv.outstanding, amount: inv.amount, lastSyncedAt: new Date(), status: inv.outstanding <= 0 ? 'PAID' : 'OPEN' },
-                                    create: {
-                                        customerId: customer.id, transNo: inv.transNo,
-                                        transDate: parseDate(inv.transDate), dueDate: parseDate(inv.dueDate),
-                                        amount: inv.amount, outstanding: inv.outstanding, status: 'OPEN'
+                        // Process in batches to control concurrency
+                        const BATCH_SIZE = 20;
+                        for (let i = 0; i < res.invoices.length; i += BATCH_SIZE) {
+                            const batch = res.invoices.slice(i, i + BATCH_SIZE);
+
+                            await Promise.all(batch.map(async (inv: any) => {
+                                try {
+                                    let customer = customerMap.get(inv.customerAccurateId);
+
+                                    // Make sure we have the customer (handle missing case)
+                                    if (!customer) {
+                                        // Double check DB just in case (race condition fallback or find by name)
+                                        customer = await prisma.customer.findUnique({ where: { accurateId: inv.customerAccurateId } }) || undefined;
+                                        if (!customer) customer = await prisma.customer.findFirst({ where: { name: inv.customerName } }) || undefined;
+                                        if (!customer) {
+                                            if (inv.customerAccurateId) {
+                                                try {
+                                                    customer = await prisma.customer.create({
+                                                        data: {
+                                                            accurateId: inv.customerAccurateId,
+                                                            name: inv.customerName
+                                                        }
+                                                    });
+                                                    // Update map to avoid re-creating in this run
+                                                    customerMap.set(inv.customerAccurateId, customer);
+                                                } catch (createError) {
+                                                    // Handle race condition where another thread created it
+                                                    customer = await prisma.customer.findUnique({ where: { accurateId: inv.customerAccurateId } }) || undefined;
+                                                }
+                                            } else {
+                                                // Fallback for missing ID
+                                                customer = await prisma.customer.create({
+                                                    data: {
+                                                        accurateId: `TEMP-${Date.now()}-${Math.random()}`,
+                                                        name: inv.customerName
+                                                    }
+                                                });
+                                            }
+                                        }
                                     }
-                                });
-                                totalProcessed++;
 
-                                // Update progress every 10 items
-                                if (totalProcessed % 10 === 0) {
-                                    await this.updateStatus(`Sync ${branch.name} (Page ${page})...`, totalProcessed, grandTotal, 'SYNCING_INVOICES');
+                                    if (customer) {
+                                        await prisma.receivable.upsert({
+                                            where: { transNo: inv.transNo },
+                                            update: { outstanding: inv.outstanding, amount: inv.amount, lastSyncedAt: new Date(), status: inv.outstanding <= 0 ? 'PAID' : 'OPEN' },
+                                            create: {
+                                                customerId: customer.id, transNo: inv.transNo,
+                                                transDate: parseDate(inv.transDate), dueDate: parseDate(inv.dueDate),
+                                                amount: inv.amount, outstanding: inv.outstanding, status: 'OPEN'
+                                            }
+                                        });
+                                        // totalProcessed++; // Atomic increment or just add batch length later? 
+                                        // incrementing local variable in promise chain is safe in JS single threaded event loop
+                                        totalProcessed++;
+                                    }
+                                } catch (dbError: any) {
+                                    console.error(`[SYNC] DB Error for invoice ${inv.transNo}:`, dbError.message);
                                 }
-                            } catch (dbError: any) {
-                                console.error(`[SYNC] DB Error for invoice ${inv.transNo}:`, dbError.message);
-                            }
+                            }));
+
+                            // Update progress after each batch
+                            await this.updateStatus(`Sync ${branch.name} (Page ${page})...`, totalProcessed, grandTotal, 'SYNCING_INVOICES');
                         }
 
                         console.log(`[SYNC] ${branch.name} Page ${page}: Processed ${res.invoices.length} invoices. Total: ${totalProcessed}`);

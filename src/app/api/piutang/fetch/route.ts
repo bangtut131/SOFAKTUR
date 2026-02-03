@@ -70,24 +70,25 @@ export async function POST(request: Request) {
 
         // Batch Upsert Customers
         console.log(`[PIUTANG SYNC] Upserting ${uniqueCustomers.size} customers...`);
-        for (const [custId, name] of uniqueCustomers) {
-            // Check if customer exists to preserve phone number if already fetched
-            const existing = await prisma.customer.findUnique({ where: { accurateId: custId } });
 
-            if (!existing) {
-                await prisma.customer.create({
-                    data: {
-                        accurateId: custId,
-                        name: name,
-                    }
-                });
-            } else {
-                // Update name just in case
-                await prisma.customer.update({
-                    where: { id: existing.id },
-                    data: { name: name }
-                });
-            }
+        const customerEntries = Array.from(uniqueCustomers.entries());
+        const CUSTOMER_BATCH_SIZE = 20; // 20 concurrent connections
+
+        for (let i = 0; i < customerEntries.length; i += CUSTOMER_BATCH_SIZE) {
+            const batch = customerEntries.slice(i, i + CUSTOMER_BATCH_SIZE);
+            await Promise.all(batch.map(async ([custId, name]) => {
+                const existing = await prisma.customer.findUnique({ where: { accurateId: custId } });
+                if (!existing) {
+                    await prisma.customer.create({
+                        data: { accurateId: custId, name: name }
+                    });
+                } else {
+                    await prisma.customer.update({
+                        where: { id: existing.id },
+                        data: { name: name }
+                    });
+                }
+            }));
         }
 
         // Sync Phone Numbers for Customers missing phone (limit to avoid timeout)
@@ -137,40 +138,40 @@ export async function POST(request: Request) {
         console.log(`[PIUTANG SYNC] Upserting ${allInvoices.length} invoices...`);
 
         // Use transaction or sequential to avoid locking if SQLite
-        for (const inv of allInvoices) {
-            const customerDbId = custMap.get(inv.customerAccurateId || inv.customerName);
-            if (!customerDbId) continue;
+        // Use transaction or sequential to avoid locking if SQLite
+        // Optimized: Batch processing for Postgres (Railway)
+        const INVOICE_BATCH_SIZE = 50;
+        for (let i = 0; i < allInvoices.length; i += INVOICE_BATCH_SIZE) {
+            const batch = allInvoices.slice(i, i + INVOICE_BATCH_SIZE);
+            await Promise.all(batch.map(async (inv) => {
+                const customerDbId = custMap.get(inv.customerAccurateId || inv.customerName);
+                if (!customerDbId) return; // continue -> return in map
 
-            const amount = inv.amount || 0;
-            const outstanding = inv.outstanding || inv.primeOwing || 0;
+                const amount = inv.amount || 0;
+                const outstanding = inv.outstanding || inv.primeOwing || 0;
+                const transDate = new Date(convertDate(inv.transDate));
+                const dueDate = new Date(convertDate(inv.dueDate));
 
-            const existingInv = await prisma.receivable.findUnique({
-                where: { transNo: inv.transNo }
-            });
-
-            if (existingInv) {
-                await prisma.receivable.update({
-                    where: { id: existingInv.id },
-                    data: {
+                // Use upsert directly to be atomic and faster
+                await prisma.receivable.upsert({
+                    where: { transNo: inv.transNo },
+                    update: {
                         outstanding: outstanding,
                         status: 'OPEN',
                         lastSyncedAt: now
-                    }
-                });
-            } else {
-                await prisma.receivable.create({
-                    data: {
+                    },
+                    create: {
                         customerId: customerDbId,
                         transNo: inv.transNo,
-                        transDate: new Date(convertDate(inv.transDate)),
-                        dueDate: new Date(convertDate(inv.dueDate)),
+                        transDate: transDate,
+                        dueDate: dueDate,
                         amount: amount,
                         outstanding: outstanding,
                         status: 'OPEN',
                         lastSyncedAt: now
                     }
                 });
-            }
+            }));
         }
 
         // Return latest stats
