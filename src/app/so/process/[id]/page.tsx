@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProcessSOPage({ params }: { params: { id: string } }) {
+export default async function ProcessSOPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const session = await prisma.soSession.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
             items: {
                 orderBy: { transDate: 'desc' }
