@@ -9,7 +9,7 @@ export async function PATCH(
 
     try {
         const { existenceStatus, remarks, status } = await request.json();
-        const id = params.id;
+
 
         const updatedItem = await prisma.soItem.update({
             where: { id },

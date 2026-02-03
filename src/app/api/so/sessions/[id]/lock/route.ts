@@ -8,7 +8,7 @@ export async function POST(
     const { id } = await params;
 
     try {
-        const id = params.id;
+
 
         const session = await prisma.soSession.update({
             where: { id },

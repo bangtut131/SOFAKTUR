@@ -36,7 +36,7 @@ export default async function AdjustmentPage({ params }: { params: Promise<{ id:
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch(`/api/so/sessions/${params.id}`);
+                const res = await fetch(`/api/so/sessions/${id}`);
                 const data = await res.json();
                 if (data.session) {
                     setItems(data.session.items);
@@ -58,13 +58,13 @@ export default async function AdjustmentPage({ params }: { params: Promise<{ id:
             }
         };
         fetchData();
-    }, [params.id]);
+    }, [id]);
 
     const handleLock = async () => {
         if (!confirm("Yakin ingin MENSUBMIT sessions ini untuk Approval Finance? \nData akan dikunci dari editing.")) return;
 
         try {
-            const res = await fetch(`/api/so/sessions/${params.id}/submit`, { method: 'POST' });
+            const res = await fetch(`/api/so/sessions/${id}/submit`, { method: 'POST' });
             if (res.ok) {
                 alert("Berhasil Submit untuk Approval!");
                 router.push('/dashboard');
@@ -153,7 +153,7 @@ export default async function AdjustmentPage({ params }: { params: Promise<{ id:
                         {sessionStatus === 'FINALIZED' && (
                             <>
                                 <button
-                                    onClick={() => window.open(`/api/so/sessions/${params.id}/export`, '_blank')}
+                                    onClick={() => window.open(`/api/so/sessions/${id}/export`, '_blank')}
                                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-bold shadow-lg transition"
                                     title="Download Excel"
                                 >

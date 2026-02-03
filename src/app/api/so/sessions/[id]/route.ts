@@ -6,7 +6,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     try {
         const session = await prisma.soSession.findUnique({
-            where: { id: params.id },
+            where: { id: id },
             include: {
                 items: {
                     orderBy: { customerName: 'asc' }
@@ -42,7 +42,7 @@ export async function DELETE(
 
     try {
         await prisma.soSession.delete({
-            where: { id: params.id }
+            where: { id: id }
         });
         return NextResponse.json({ success: true });
     } catch (error: any) {

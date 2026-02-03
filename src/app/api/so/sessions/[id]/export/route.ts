@@ -6,7 +6,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     try {
         const session = await prisma.soSession.findUnique({
-            where: { id: params.id },
+            where: { id: id },
             include: {
                 items: {
                     orderBy: { transDate: 'desc' }

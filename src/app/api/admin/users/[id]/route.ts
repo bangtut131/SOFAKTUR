@@ -15,29 +15,30 @@ export async function PATCH(
         if (role) data.role = role;
 
         const user = await prisma.user.update({
-            where: { id: params.id },
+            where: { id: id },
             data
         });
 
         return NextResponse.json({ success: true, user });
-    } catch (error: any
-            return NextResponse.json({ error: error.message }, { status: 500 });
-}
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
+}
 
 // DELETE User
 export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
-    
-        const { id } = await params;
+) {
 
-            try {
-    await prisma.user.delete({
-        where: { id: params.id }
-    });
-    return NextResponse.json({ success: true });
-} catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const { id } = await params;
+
+    try {
+        await prisma.user.delete({
+            where: { id: id }
+        });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 }
-        }

@@ -27,7 +27,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch(`/api/so/sessions/${params.id}`);
+                const res = await fetch(`/api/so/sessions/${id}`);
                 const data = await res.json();
                 if (data.session) {
                     setItems(data.session.items);
@@ -41,7 +41,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
             }
         };
         fetchData();
-    }, [params.id]);
+    }, [id]);
 
     const handleApproval = async (action: 'APPROVE' | 'REJECT') => {
         const confirmMsg = action === 'APPROVE'
@@ -51,7 +51,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
         if (!confirm(confirmMsg)) return;
 
         try {
-            const res = await fetch(`/api/so/sessions/${params.id}/approve`, {
+            const res = await fetch(`/api/so/sessions/${id}/approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action })
@@ -97,7 +97,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={() => window.open(`/api/so/sessions/${params.id}/export`, '_blank')}
+                        onClick={() => window.open(`/api/so/sessions/${id}/export`, '_blank')}
                         className="flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-bold transition"
                         title="Download Rekap Excel"
                     >
