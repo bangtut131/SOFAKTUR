@@ -18,26 +18,52 @@ export async function POST(request: Request) {
         const LIMIT = 100;
         const MAX_PAGES = 500;
 
-        while (hasMore && page <= MAX_PAGES) {
-            console.log(`[PIUTANG SYNC] Fetching page ${page}...`);
-            const result = await AccurateServerService.fetchInvoices({
-                owingStatus: 'UNPAID',
-                page: page,
-                limit: LIMIT,
-                branchId: branchId || undefined
-            });
+        // Optimized: Fetch pages in parallel to speed up Phase 1 (Accurate API is slow)
+        const CONCURRENT_REQUESTS = 5; // Safe limit to avoid 429 too quickly
 
-            if (result.error) {
-                console.error(`[PIUTANG SYNC] Error on page ${page}: ${result.error}`);
-                break;
+        while (hasMore && page <= MAX_PAGES) {
+            const pageBatch = [];
+            for (let i = 0; i < CONCURRENT_REQUESTS; i++) {
+                if (page + i <= MAX_PAGES) {
+                    pageBatch.push(page + i);
+                }
             }
 
-            allInvoices = [...allInvoices, ...result.invoices];
-            const rawCount = result.rawCount || result.invoices.length;
-            if (rawCount < LIMIT) hasMore = false;
-            else page++;
+            if (pageBatch.length === 0) break;
 
-            await new Promise(r => setTimeout(r, 200));
+            console.log(`[PIUTANG SYNC] Fetching pages ${pageBatch.join(', ')} in parallel...`);
+
+            const results = await Promise.all(pageBatch.map(p =>
+                AccurateServerService.fetchInvoices({
+                    owingStatus: 'UNPAID',
+                    page: p,
+                    limit: LIMIT,
+                    branchId: branchId || undefined
+                })
+            ));
+
+            let batchHasMore = true;
+            for (const result of results) {
+                if (result.error) {
+                    console.error(`[PIUTANG SYNC] Error in batch: ${result.error}`);
+                    // If error, we might stop or continue. Let's continue partials.
+                } else {
+                    if (result.invoices && result.invoices.length > 0) {
+                        allInvoices.push(...result.invoices);
+                    }
+
+                    const rawCount = result.rawCount || (result.invoices ? result.invoices.length : 0);
+                    if (rawCount < LIMIT) {
+                        batchHasMore = false; // Found a non-full page, so end reached
+                    }
+                }
+            }
+
+            if (!batchHasMore) hasMore = false;
+            page += pageBatch.length;
+
+            // Small delay between batches to allow API buffer
+            await new Promise(r => setTimeout(r, 500));
         }
 
         console.log(`[PIUTANG SYNC] Total invoices fetched: ${allInvoices.length}`);
