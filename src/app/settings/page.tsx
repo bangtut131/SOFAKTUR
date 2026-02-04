@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit, Clock, Calendar } from "lucide-react";
+import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit, Clock, Calendar, FileText, AlertCircle, CheckCircle } from "lucide-react";
 
 interface User {
     id: string;
@@ -129,6 +129,7 @@ const CronEditor = ({ value, onChange }: { value: string, onChange: (val: string
 export default function SettingsPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('USERS');
+    const [isAdmin, setIsAdmin] = useState(false);
 
     // User Management State
     const [users, setUsers] = useState<User[]>([]);
@@ -145,11 +146,27 @@ export default function SettingsPage() {
     // Schedule State
     const [schedules, setSchedules] = useState<any[]>([]);
 
+    // Logs State
+    const [logs, setLogs] = useState<any[]>([]);
+    const [loadingLogs, setLoadingLogs] = useState(false);
+
     useEffect(() => {
+        // Check role
+        const role = getCookie('user_role');
+        setIsAdmin(role === 'ADMIN');
+
         fetchUsers();
         fetchSettings();
         fetchSchedules();
     }, []);
+
+    // Helper: basic cookie parser
+    const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+    };
 
     const fetchUsers = async () => {
         const res = await fetch('/api/admin/users');
@@ -176,6 +193,24 @@ export default function SettingsPage() {
         const data = await res.json();
         if (data.success) setSchedules(data.schedules);
     };
+
+    const fetchLogs = async () => {
+        setLoadingLogs(true);
+        try {
+            const res = await fetch('/api/admin/logs?limit=100');
+            const data = await res.json();
+            if (data.success) setLogs(data.logs);
+        } catch (e) {
+            console.error("Failed to fetch logs", e);
+        } finally {
+            setLoadingLogs(false);
+        }
+    };
+
+    // Load logs when tab switched
+    useEffect(() => {
+        if (activeTab === 'LOGS') fetchLogs();
+    }, [activeTab]);
 
     const handleSaveUser = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -235,7 +270,6 @@ export default function SettingsPage() {
         if (res.ok) {
             const data = await res.json();
             alert("Jadwal tersimpan!");
-            // Update local state is tricky because ID might be new, better refresh
             fetchSchedules();
         } else {
             alert("Gagal menyimpan jadwal");
@@ -293,6 +327,14 @@ export default function SettingsPage() {
                         >
                             <Clock size={18} /> Otomatisasi & Jadwal
                         </button>
+                        {isAdmin && (
+                            <button
+                                onClick={() => setActiveTab('LOGS')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition ${activeTab === 'LOGS' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                <FileText size={18} /> System Logs
+                            </button>
+                        )}
                     </nav>
                 </div>
 
@@ -488,6 +530,62 @@ export default function SettingsPage() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* LOGS TAB */}
+                    {activeTab === 'LOGS' && isAdmin && (
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-lg font-bold text-gray-900">System Logs (Last 100)</h2>
+                                <button onClick={fetchLogs} className="text-blue-600 font-bold text-sm hover:underline">
+                                    Refresh
+                                </button>
+                            </div>
+
+                            {loadingLogs ? (
+                                <p className="text-gray-500 text-sm">Loading logs...</p>
+                            ) : (
+                                <div className="overflow-hidden border rounded-lg">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-gray-100 text-gray-900 font-bold border-b">
+                                            <tr>
+                                                <th className="p-3">Waktu</th>
+                                                <th className="p-3">Customer</th>
+                                                <th className="p-3">Status</th>
+                                                <th className="p-3">Message</th>
+                                                <th className="p-3">Error Info</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {logs.length === 0 ? (
+                                                <tr><td colSpan={5} className="p-4 text-center text-gray-500">Belum ada log aktifitas.</td></tr>
+                                            ) : (
+                                                logs.map(log => (
+                                                    <tr key={log.id} className="hover:bg-gray-50">
+                                                        <td className="p-3 text-xs text-gray-600 whitespace-nowrap">
+                                                            {new Date(log.sentAt).toLocaleString('id-ID')}
+                                                        </td>
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-gray-900">{log.customerName}</div>
+                                                            <div className="text-xs text-gray-500">{log.phone}</div>
+                                                        </td>
+                                                        <td className="p-3">
+                                                            {log.status === 'SENT' ? (
+                                                                <span className="flex items-center gap-1 text-green-600 font-bold text-xs"><CheckCircle size={12} /> SENT</span>
+                                                            ) : (
+                                                                <span className="flex items-center gap-1 text-red-600 font-bold text-xs"><AlertCircle size={12} /> {log.status}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-xs text-gray-700 max-w-[200px] truncate" title={log.message}>{log.message}</td>
+                                                        <td className="p-3 text-xs text-red-600 font-mono">{log.error || '-'}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
 

@@ -103,6 +103,20 @@ export default function PiutangPage() {
         setShowDetail(true);
     };
 
+    // Role check
+    const [isStaff, setIsStaff] = useState(false);
+
+    useEffect(() => {
+        const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop()?.split(';').shift();
+            return null;
+        };
+        const role = getCookie('user_role');
+        setIsStaff(role === 'STAFF');
+    }, []);
+
     const handleBroadcast = async () => {
         if (!confirm("Kirim broadcast ke semua pelanggan yang memiliki piutang?")) return;
         router.push('/piutang/settings');
@@ -129,12 +143,14 @@ export default function PiutangPage() {
                     >
                         <History size={16} /> History
                     </button>
-                    <button
-                        onClick={() => router.push('/piutang/settings')}
-                        className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 flex items-center gap-2"
-                    >
-                        <Settings size={16} /> Settings
-                    </button>
+                    {!isStaff && (
+                        <button
+                            onClick={() => router.push('/piutang/settings')}
+                            className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 flex items-center gap-2"
+                        >
+                            <Settings size={16} /> Settings
+                        </button>
+                    )}
                 </div>
             </header>
 
