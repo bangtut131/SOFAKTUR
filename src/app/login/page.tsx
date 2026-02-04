@@ -14,6 +14,8 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loading) return;
+
         setError("");
         setLoading(true);
         console.log("Attempting login for:", username);
@@ -32,14 +34,14 @@ export default function LoginPage() {
             if (data.success) {
                 console.log("Redirecting to dashboard...");
                 router.push('/dashboard');
-                router.refresh(); // Ensure middleware re-runs
+                // Removed router.refresh() to prevent race conditions/double loading
             } else {
                 setError(data.error || "Login gagal");
+                setLoading(false); // Only set loading false on failure/error
             }
         } catch (err) {
             console.error("Login Error:", err);
             setError("Gagal menghubungi server");
-        } finally {
             setLoading(false);
         }
     };
