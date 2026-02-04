@@ -111,6 +111,10 @@ model BroadcastSchedule {
   lastRun         DateTime?
   nextRun         DateTime?
   status          String   @default("IDLE") // IDLE, RUNNING
+  
+  // Optional Filters
+  minDaysSinceTrans Int?   // Minimum days since invoice transaction date
+  minDaysOverdue    Int?   // Minimum days past due date
 }
 
 model BroadcastLog {

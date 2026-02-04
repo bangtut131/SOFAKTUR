@@ -311,13 +311,34 @@ export const SchedulerService = {
         const schedule = await prisma.broadcastSchedule.findUnique({ where: { id: scheduleId } });
         if (!schedule || !schedule.isEnabled || !schedule.messageTemplate) return;
         await prisma.broadcastSchedule.update({ where: { id: scheduleId }, data: { lastRun: new Date() } });
+
         const customers = await prisma.customer.findMany({
             where: { NOT: [{ phone: null }, { phone: "" }], receivables: { some: { status: 'OPEN', outstanding: { gt: 0 } } } },
             include: { receivables: { where: { status: 'OPEN', outstanding: { gt: 0 } } } }
         });
+
+        const today = new Date();
+        const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
         for (const cust of customers) {
-            const totalOwing = cust.receivables.reduce((sum, inv) => sum + inv.outstanding, 0);
-            const invoiceList = cust.receivables.map(r => `- ${r.transNo}: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.outstanding)}`).join('\n');
+            // Filter invoices based on schedule settings
+            const eligibleReceivables = cust.receivables.filter(r => {
+                const daysSinceTrans = Math.floor((today.getTime() - new Date(r.transDate).getTime()) / MS_PER_DAY);
+                const daysOverdue = Math.floor((today.getTime() - new Date(r.dueDate).getTime()) / MS_PER_DAY);
+
+                // Check Transaction Date Age
+                if (schedule.minDaysSinceTrans && daysSinceTrans < schedule.minDaysSinceTrans) return false;
+
+                // Check Overdue Age
+                if (schedule.minDaysOverdue && daysOverdue < schedule.minDaysOverdue) return false;
+
+                return true;
+            });
+
+            if (eligibleReceivables.length === 0) continue; // Skip customer if no eligible invoices
+
+            const totalOwing = eligibleReceivables.reduce((sum, inv) => sum + inv.outstanding, 0);
+            const invoiceList = eligibleReceivables.map(r => `- ${r.transNo}: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.outstanding)}`).join('\n');
             let message = schedule.messageTemplate.replace(/{customerName}/g, cust.name).replace(/{totalOwing}/g, new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalOwing)).replace(/{invoiceList}/g, invoiceList);
             const sent = await WahaService.sendText(cust.phone!, message);
             await prisma.broadcastLog.create({

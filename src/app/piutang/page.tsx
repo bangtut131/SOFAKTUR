@@ -290,20 +290,30 @@ export default function PiutangPage() {
                                         <th className="p-2 text-left text-gray-800">No. Invoice</th>
                                         <th className="p-2 text-center text-gray-800">Tgl Trans</th>
                                         <th className="p-2 text-center text-gray-800">Jatuh Tempo</th>
+                                        <th className="p-2 text-center text-gray-800">Umur</th>
+                                        <th className="p-2 text-center text-gray-800">Overdue</th>
                                         <th className="p-2 text-right text-gray-800">Outstanding</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {selectedCustomer.invoices?.map((r: any, idx: number) => (
-                                        <tr key={idx} className="hover:bg-gray-50">
-                                            <td className="p-2 font-mono text-xs text-gray-800">{r.transNo}</td>
-                                            <td className="p-2 text-center text-xs text-gray-700">{r.transDate}</td>
-                                            <td className="p-2 text-center text-xs text-gray-700">{r.dueDate}</td>
-                                            <td className="p-2 text-right font-mono font-bold text-red-700">
-                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.outstanding)}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {selectedCustomer.invoices?.map((r: any, idx: number) => {
+                                        const age = Math.floor((new Date().getTime() - new Date(r.transDate).getTime()) / (1000 * 60 * 60 * 24));
+                                        const overdue = Math.floor((new Date().getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+                                        return (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="p-2 font-mono text-xs text-gray-800">{r.transNo}</td>
+                                                <td className="p-2 text-center text-xs text-gray-700">{new Date(r.transDate).toLocaleDateString('id-ID')}</td>
+                                                <td className="p-2 text-center text-xs text-gray-700">{new Date(r.dueDate).toLocaleDateString('id-ID')}</td>
+                                                <td className="p-2 text-center text-xs text-gray-700">{age} Hari</td>
+                                                <td className={`p-2 text-center text-xs font-bold ${overdue > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                                    {overdue > 0 ? `${overdue} Hari` : 'Belum'}
+                                                </td>
+                                                <td className="p-2 text-right font-mono font-bold text-red-700">
+                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.outstanding)}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>

@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { type, cronExpression, isEnabled, messageTemplate, name, id, wahaUrl, wahaApiKey, wahaSessionId } = body;
+        const { type, cronExpression, isEnabled, messageTemplate, name, id, wahaUrl, wahaApiKey, wahaSessionId, minDaysSinceTrans, minDaysOverdue } = body;
 
         // 1. Save WAHA Config if present
         if (wahaUrl !== undefined || wahaApiKey !== undefined || wahaSessionId !== undefined) {
@@ -67,7 +67,9 @@ export async function POST(request: Request) {
                     isEnabled,
                     messageTemplate,
                     type,
-                    name
+                    name,
+                    minDaysSinceTrans,
+                    minDaysOverdue
                 }
             });
             await SchedulerService.initScheduler();
@@ -80,7 +82,9 @@ export async function POST(request: Request) {
                     type,
                     cronExpression,
                     isEnabled,
-                    messageTemplate
+                    messageTemplate,
+                    minDaysSinceTrans,
+                    minDaysOverdue
                 }
             });
             await SchedulerService.initScheduler();

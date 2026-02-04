@@ -470,6 +470,33 @@ export default function PiutangSettingsPage() {
                                 </div>
                             )}
 
+                            {schedule.type === 'BROADCAST' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-t pt-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Min. Umur Faktur (Hari)</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-2 border rounded font-bold text-gray-900 text-sm"
+                                            placeholder="Contoh: 30"
+                                            value={schedule.minDaysSinceTrans || ''}
+                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, minDaysSinceTrans: e.target.value ? parseInt(e.target.value) : null } : s))}
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1">Hanya kirim jike umur faktur &ge; X hari (Sejak tgl transaksi)</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Min. Lewat Jatuh Tempo (Hari)</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-2 border rounded font-bold text-gray-900 text-sm"
+                                            placeholder="Contoh: 7"
+                                            value={schedule.minDaysOverdue || ''}
+                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, minDaysOverdue: e.target.value ? parseInt(e.target.value) : null } : s))}
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1">Hanya kirim jika sudah jatuh tempo &ge; X hari</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-end gap-2 border-t pt-4">
                                 <button className="text-red-500 hover:bg-red-50 px-3 py-2 rounded text-sm font-bold flex items-center gap-1">
                                     <Trash size={14} /> Hapus
