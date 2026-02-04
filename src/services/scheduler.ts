@@ -37,6 +37,7 @@ export const SchedulerService = {
                     const task = cron.schedule(schedule.cronExpression, async () => {
                         if (schedule.type === 'SYNC') await this.runSyncJob(schedule.id);
                         else if (schedule.type === 'BROADCAST') await this.runBroadcastJob(schedule.id);
+                        else if (schedule.type === 'SO_SYNC') await this.runSoSyncJob(schedule.id);
                     });
                     this.jobs[schedule.id] = task;
                 }
@@ -344,6 +345,97 @@ export const SchedulerService = {
             await prisma.broadcastLog.create({
                 data: { customerId: cust.id, customerName: cust.name, phone: cust.phone!, message, status: sent.success ? 'SENT' : 'FAILED', error: sent.error || null, source: 'SYSTEM' }
             });
+        }
+    },
+
+    async runSoSyncJob(scheduleId?: string) {
+        console.log("Starting SO Auto Sync Job...");
+        if (scheduleId) await prisma.broadcastSchedule.update({ where: { id: scheduleId }, data: { lastRun: new Date() } });
+
+        try {
+            const dateStr = formatDate(new Date());
+            const periodName = `Auto Sync ${dateStr}`;
+
+            // 1. Create Session
+            const session = await prisma.soSession.create({
+                data: {
+                    periodName,
+                    status: 'OPEN',
+                    totalItems: 0,
+                    totalValue: 0
+                }
+            });
+            console.log(`[SO SYNC] Created Session: ${periodName} (${session.id})`);
+
+            // 2. Fetch Invoices from Accurate (Unpaid Only)
+            let page = 1;
+            let hasMore = true;
+            let totalItems = 0;
+            let totalValue = 0;
+
+            while (hasMore) {
+                // Rate limit
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                const result = await AccurateServerService.fetchInvoices({
+                    owingStatus: 'UNPAID',
+                    page,
+                    limit: 100
+                }) as any;
+
+                if (result.error) {
+                    console.error(`[SO SYNC] Error fetching page ${page}: ${result.error}`);
+                    break;
+                }
+
+                const invoices = result.invoices || [];
+                if (invoices.length === 0) {
+                    hasMore = false;
+                    break;
+                }
+
+                // 3. Save to DB
+                // Prepare data
+                const itemsData = invoices.map((inv: any) => ({
+                    sessionId: session.id,
+                    transNo: inv.transNo,
+                    transDate: inv.transDate,
+                    dueDate: inv.dueDate,
+                    customerName: inv.customerName,
+                    description: inv.description,
+                    statusName: inv.statusName,
+                    approvalStatus: inv.approvalStatus,
+                    amount: inv.amount,
+                    outstanding: inv.outstanding,
+                    primeOwing: inv.primeOwing,
+                    status: 'UNVERIFIED'
+                }));
+
+                await prisma.soItem.createMany({ data: itemsData });
+
+                // Accumulate stats
+                totalItems += invoices.length;
+                totalValue += invoices.reduce((sum: number, item: any) => sum + (Number(item.primeOwing) || 0), 0);
+
+                console.log(`[SO SYNC] Processed page ${page}: ${invoices.length} invoices`);
+
+                if (invoices.length < 100) hasMore = false;
+                else page++;
+            }
+
+            // 4. Update Session Stats
+            await prisma.soSession.update({
+                where: { id: session.id },
+                data: {
+                    totalItems,
+                    totalValue
+                }
+            });
+
+            console.log(`[SO SYNC] Completed. Total Items: ${totalItems}, Total Value: ${totalValue}`);
+
+        } catch (e: any) {
+            console.error("SO Sync Job Failed:", e.message);
         }
     }
 };

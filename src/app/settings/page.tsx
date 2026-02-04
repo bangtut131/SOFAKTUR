@@ -1,8 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit } from "lucide-react";
+import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit, Clock, Calendar } from "lucide-react";
 
 interface User {
     id: string;
@@ -20,6 +18,112 @@ const AVAILABLE_COLUMNS = [
     { key: 'approvalStatus', label: 'Status Approval' },
 ];
 
+// Cron Helper
+const parseCronRaw = (cron: string) => {
+    const parts = cron.split(' ');
+    if (parts.length < 5) return { type: 'DAILY', time: '08:00', day: '1', date: '1' };
+    const [min, hour, dom, month, dow] = parts;
+    const time = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`;
+    if (dom !== '*' && month === '*') return { type: 'MONTHLY', time, day: '1', date: dom };
+    else if (dow !== '*' && dom === '*') return { type: 'WEEKLY', time, day: dow, date: '1' };
+    else return { type: 'DAILY', time, day: '1', date: '1' };
+};
+
+const formatCronRaw = (type: string, time: string, dayOrDate: string) => {
+    const [h, m] = time.split(':');
+    const min = parseInt(m || '0');
+    const hour = parseInt(h || '0');
+    if (type === 'DAILY') return `${min} ${hour} * * *`;
+    else if (type === 'WEEKLY') return `${min} ${hour} * * ${dayOrDate}`;
+    else if (type === 'MONTHLY') return `${min} ${hour} ${dayOrDate} * *`;
+    return `0 8 * * 1`;
+};
+
+const CronEditor = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
+    const parsed = parseCronRaw(value);
+    const [type, setType] = useState(parsed.type);
+    const [time, setTime] = useState(parsed.time);
+    const [dayOrDate, setDayOrDate] = useState(parsed.type === 'WEEKLY' ? parsed.day : parsed.date);
+
+    useEffect(() => {
+        const p = parseCronRaw(value);
+        setType(p.type);
+        setTime(p.time);
+        setDayOrDate(p.type === 'WEEKLY' ? p.day : p.date);
+    }, [value]);
+
+    const updateCron = (t: string, tm: string, dd: string) => {
+        onChange(formatCronRaw(t, tm, dd));
+    };
+
+    return (
+        <div className="flex gap-2 items-center flex-wrap">
+            <select
+                className="p-2 border rounded font-bold text-gray-900 text-sm"
+                value={type}
+                onChange={(e) => {
+                    const newType = e.target.value;
+                    setType(newType);
+                    updateCron(newType, time, dayOrDate);
+                }}
+            >
+                <option value="DAILY">Setiap Hari</option>
+                <option value="WEEKLY">Setiap Minggu</option>
+                <option value="MONTHLY">Setiap Bulan</option>
+            </select>
+
+            {type === 'WEEKLY' && (
+                <select
+                    className="p-2 border rounded text-gray-900 text-sm"
+                    value={dayOrDate}
+                    onChange={(e) => {
+                        setDayOrDate(e.target.value);
+                        updateCron(type, time, e.target.value);
+                    }}
+                >
+                    <option value="1">Senin</option>
+                    <option value="2">Selasa</option>
+                    <option value="3">Rabu</option>
+                    <option value="4">Kamis</option>
+                    <option value="5">Jumat</option>
+                    <option value="6">Sabtu</option>
+                    <option value="0">Minggu</option>
+                </select>
+            )}
+
+            {type === 'MONTHLY' && (
+                <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500 font-bold">Tgl:</span>
+                    <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        className="p-2 border rounded w-16 text-gray-900 text-sm"
+                        value={dayOrDate}
+                        onChange={(e) => {
+                            setDayOrDate(e.target.value);
+                            updateCron(type, time, e.target.value);
+                        }}
+                    />
+                </div>
+            )}
+
+            <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-500 font-bold">Jam:</span>
+                <input
+                    type="time"
+                    className="p-2 border rounded text-gray-900 text-sm"
+                    value={time}
+                    onChange={(e) => {
+                        setTime(e.target.value);
+                        updateCron(type, e.target.value, dayOrDate);
+                    }}
+                />
+            </div>
+        </div>
+    );
+};
+
 export default function SettingsPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('USERS');
@@ -36,9 +140,13 @@ export default function SettingsPage() {
         'FINANCE': AVAILABLE_COLUMNS.map(c => c.key),
     });
 
+    // Schedule State
+    const [schedules, setSchedules] = useState<any[]>([]);
+
     useEffect(() => {
         fetchUsers();
         fetchSettings();
+        fetchSchedules();
     }, []);
 
     const fetchUsers = async () => {
@@ -59,6 +167,12 @@ export default function SettingsPage() {
             });
             setRoleConfigs(newConfigs);
         }
+    };
+
+    const fetchSchedules = async () => {
+        const res = await fetch('/api/admin/schedules');
+        const data = await res.json();
+        if (data.success) setSchedules(data.schedules);
     };
 
     const handleSaveUser = async (e: React.FormEvent) => {
@@ -110,6 +224,42 @@ export default function SettingsPage() {
         alert(`Setting role ${role} tersimpan!`);
     };
 
+    const handleSaveSchedule = async (schedule: any) => {
+        const res = await fetch('/api/admin/schedules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(schedule)
+        });
+        if (res.ok) {
+            const data = await res.json();
+            alert("Jadwal tersimpan!");
+            // Update local state is tricky because ID might be new, better refresh
+            fetchSchedules();
+        } else {
+            alert("Gagal menyimpan jadwal");
+        }
+    };
+
+    const handleDeleteSchedule = async (id: string) => {
+        if (!confirm("Hapus jadwal ini?")) return;
+        await fetch(`/api/admin/schedules?id=${id}`, { method: 'DELETE' });
+        fetchSchedules();
+    };
+
+    const handleAddSchedule = () => {
+        const newSchedule = {
+            id: null,
+            name: `New Schedule ${new Date().getTime().toString().slice(-4)}`,
+            type: 'SO_SYNC',
+            cronExpression: "0 8 * * *",
+            isEnabled: false,
+            messageTemplate: null,
+            minDaysSinceTrans: null,
+            minDaysOverdue: null
+        };
+        handleSaveSchedule(newSchedule);
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <header className="flex items-center gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm border">
@@ -134,6 +284,12 @@ export default function SettingsPage() {
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition ${activeTab === 'ROLES' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
                         >
                             <Shield size={18} /> Role Permissions
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('SCHEDULES')}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition ${activeTab === 'SCHEDULES' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                        >
+                            <Clock size={18} /> Otomatisasi & Jadwal
                         </button>
                     </nav>
                 </div>
@@ -231,6 +387,104 @@ export default function SettingsPage() {
                                         </label>
                                     ))}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SCHEDULES TAB */}
+                    {activeTab === 'SCHEDULES' && (
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-lg font-bold text-gray-900">Task Scheduling & Automation</h2>
+                                <button
+                                    onClick={handleAddSchedule}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-blue-700"
+                                >
+                                    <Plus size={16} /> Tambah Jadwal Baru
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                {schedules.map((schedule) => (
+                                    <div key={schedule.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex-1">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Jadwal</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full text-lg font-bold border-b border-gray-300 focus:border-blue-500 outline-none pb-1 text-gray-900"
+                                                    value={schedule.name}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, name: val } : s));
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="ml-4">
+                                                <label className="flex items-center cursor-pointer">
+                                                    <div className="relative">
+                                                        <input type="checkbox" className="sr-only" checked={schedule.isEnabled}
+                                                            onChange={(e) => {
+                                                                const val = e.target.checked;
+                                                                const updated = { ...schedule, isEnabled: val };
+                                                                setSchedules(prev => prev.map(s => s.id === schedule.id ? updated : s));
+                                                                handleSaveSchedule(updated);
+                                                            }}
+                                                        />
+                                                        <div className={`block w-10 h-6 rounded-full ${schedule.isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${schedule.isEnabled ? 'transform translate-x-4' : ''}`}></div>
+                                                    </div>
+                                                    <div className="ml-3 text-sm font-bold text-gray-700">
+                                                        {schedule.isEnabled ? 'Aktif' : 'Non-Aktif'}
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipe Task</label>
+                                                <select
+                                                    className="w-full p-2 border rounded font-bold text-gray-900"
+                                                    value={schedule.type}
+                                                    onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, type: e.target.value } : s))}
+                                                >
+                                                    <option value="SO_SYNC">SO Auto-Sync (Buat Sesi SO Baru)</option>
+                                                    <option value="SYNC">Piutang Sync (Update Data Outstanding)</option>
+                                                    <option value="BROADCAST">Auto Broadcast WA (Penagihan)</option>
+                                                </select>
+                                                <p className="text-[10px] text-gray-400 mt-1">
+                                                    {schedule.type === 'SO_SYNC' && "Otomatis menarik data Faktur dari Accurate & membuat Sesi SO baru."}
+                                                    {schedule.type === 'SYNC' && "Otomatis menyamakan data piutang dengan Accurate tanpa buat sesi baru."}
+                                                    {schedule.type === 'BROADCAST' && "Mengirim pesan WA tagihan secara otomatis ke customer."}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Jadwal Eksekusi</label>
+                                                <CronEditor
+                                                    value={schedule.cronExpression}
+                                                    onChange={(val) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, cronExpression: val } : s))}
+                                                />
+                                                <p className="text-[10px] text-gray-400 mt-1">Raw: {schedule.cronExpression}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 border-t pt-4">
+                                            <button
+                                                onClick={() => handleDeleteSchedule(schedule.id)}
+                                                className="text-red-500 hover:bg-red-50 px-3 py-2 rounded text-sm font-bold flex items-center gap-1"
+                                            >
+                                                <Trash2 size={14} /> Hapus
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveSchedule(schedule)}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"
+                                            >
+                                                <Save size={16} /> Simpan Perubahan
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
