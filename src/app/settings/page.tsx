@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit, Clock, Calendar } from "lucide-react";
