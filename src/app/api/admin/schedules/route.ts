@@ -5,7 +5,7 @@ import { SchedulerService } from '@/services/scheduler';
 export async function GET() {
     try {
         const schedules = await prisma.broadcastSchedule.findMany({
-            orderBy: { createdAt: 'desc' }
+            orderBy: { name: 'asc' }
         });
         return NextResponse.json({ success: true, schedules });
     } catch (error: any) {
