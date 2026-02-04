@@ -115,6 +115,12 @@ model BroadcastSchedule {
   // Optional Filters
   minDaysSinceTrans Int?   // Minimum days since invoice transaction date
   minDaysOverdue    Int?   // Minimum days past due date
+  
+  // SO Sync Specific
+  branchId          String?
+  startDate         DateTime?
+  endDate           DateTime?
+  invoiceStatus     String?   @default("UNPAID") // UNPAID, PAID, ALL
 }
 
 model BroadcastLog {

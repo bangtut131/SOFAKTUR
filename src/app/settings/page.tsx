@@ -145,6 +145,7 @@ export default function SettingsPage() {
 
     // Schedule State
     const [schedules, setSchedules] = useState<any[]>([]);
+    const [branches, setBranches] = useState<any[]>([]);
 
     // Logs State
     const [logs, setLogs] = useState<any[]>([]);
@@ -158,6 +159,7 @@ export default function SettingsPage() {
         fetchUsers();
         fetchSettings();
         fetchSchedules();
+        fetchBranches();
     }, []);
 
     // Helper: basic cookie parser
@@ -192,6 +194,16 @@ export default function SettingsPage() {
         const res = await fetch('/api/admin/schedules');
         const data = await res.json();
         if (data.success) setSchedules(data.schedules);
+    };
+
+    const fetchBranches = async () => {
+        try {
+            const res = await fetch('/api/admin/branches');
+            const data = await res.json();
+            if (data.success) setBranches(data.branches);
+        } catch (e) {
+            console.error("Failed to fetch branches", e);
+        }
     };
 
     const fetchLogs = async () => {
@@ -291,7 +303,11 @@ export default function SettingsPage() {
             isEnabled: false,
             messageTemplate: null,
             minDaysSinceTrans: null,
-            minDaysOverdue: null
+            minDaysOverdue: null,
+            branchId: null,
+            startDate: null,
+            endDate: null,
+            invoiceStatus: 'UNPAID'
         };
         handleSaveSchedule(newSchedule);
     };
@@ -512,6 +528,61 @@ export default function SettingsPage() {
                                                 <p className="text-[10px] text-gray-400 mt-1">Raw: {schedule.cronExpression}</p>
                                             </div>
                                         </div>
+
+                                        {/* Parameters for SO_SYNC */}
+                                        {schedule.type === 'SO_SYNC' && (
+                                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                                                <h4 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2"><Key size={14} /> Parameter Auto-Sync</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Cabang</label>
+                                                        <select
+                                                            className="w-full p-2 border rounded text-sm text-gray-900"
+                                                            value={schedule.branchId || ""}
+                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, branchId: e.target.value || null } : s))}
+                                                        >
+                                                            <option value="">Semua Cabang</option>
+                                                            {branches.map(b => (
+                                                                <option key={b.id} value={b.id}>{b.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Status Invoice</label>
+                                                        <select
+                                                            className="w-full p-2 border rounded text-sm text-gray-900"
+                                                            value={schedule.invoiceStatus || "UNPAID"}
+                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, invoiceStatus: e.target.value } : s))}
+                                                        >
+                                                            <option value="UNPAID">Belum Lunas (Unpaid)</option>
+                                                            <option value="PAID">Lunas (Paid)</option>
+                                                            <option value="ALL">Semua Status</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Dari Tanggal (Opsional)</label>
+                                                        <input
+                                                            type="date"
+                                                            className="w-full p-2 border rounded text-sm text-gray-900"
+                                                            value={schedule.startDate ? new Date(schedule.startDate).toISOString().split('T')[0] : ''}
+                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, startDate: e.target.value ? new Date(e.target.value) : null } : s))}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Sampai Tanggal (Opsional)</label>
+                                                        <input
+                                                            type="date"
+                                                            className="w-full p-2 border rounded text-sm text-gray-900"
+                                                            value={schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : ''}
+                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, endDate: e.target.value ? new Date(e.target.value) : null } : s))}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-blue-600 mt-2 italic">
+                                                    * Jika tanggal dikosongkan, sistem akan sync semua data sesuai status yang dipilih.
+                                                </p>
+                                            </div>
+                                        )}
 
                                         <div className="flex justify-end gap-2 border-t pt-4">
                                             <button

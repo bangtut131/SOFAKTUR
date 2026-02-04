@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, type, cronExpression, isEnabled, messageTemplate, minDaysSinceTrans, minDaysOverdue } = body;
+        const { id, name, type, cronExpression, isEnabled, messageTemplate, minDaysSinceTrans, minDaysOverdue, branchId, startDate, endDate, invoiceStatus } = body;
 
         let schedule;
         if (id) {
@@ -30,7 +30,11 @@ export async function POST(request: Request) {
                     isEnabled,
                     messageTemplate,
                     minDaysSinceTrans,
-                    minDaysOverdue
+                    minDaysOverdue,
+                    branchId: branchId || null,
+                    startDate: startDate ? new Date(startDate) : null,
+                    endDate: endDate ? new Date(endDate) : null,
+                    invoiceStatus: invoiceStatus || 'UNPAID'
                 }
             });
         } else {
@@ -43,7 +47,11 @@ export async function POST(request: Request) {
                     isEnabled: isEnabled || false,
                     messageTemplate,
                     minDaysSinceTrans,
-                    minDaysOverdue
+                    minDaysOverdue,
+                    branchId: branchId || null,
+                    startDate: startDate ? new Date(startDate) : null,
+                    endDate: endDate ? new Date(endDate) : null,
+                    invoiceStatus: invoiceStatus || 'UNPAID'
                 }
             });
         }

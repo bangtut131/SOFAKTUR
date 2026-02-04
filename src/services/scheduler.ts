@@ -350,9 +350,17 @@ export const SchedulerService = {
 
     async runSoSyncJob(scheduleId?: string) {
         console.log("Starting SO Auto Sync Job...");
-        if (scheduleId) await prisma.broadcastSchedule.update({ where: { id: scheduleId }, data: { lastRun: new Date() } });
-
         try {
+            // 1. Fetch Schedule Settings if ID provided
+            let scheduleSettings: any = {};
+            if (scheduleId) {
+                const schedule = await prisma.broadcastSchedule.findUnique({ where: { id: scheduleId } });
+                if (schedule) {
+                    scheduleSettings = schedule;
+                    await prisma.broadcastSchedule.update({ where: { id: scheduleId }, data: { lastRun: new Date() } });
+                }
+            }
+
             const dateStr = formatDate(new Date());
             const periodName = `Auto Sync ${dateStr}`;
 
@@ -373,14 +381,23 @@ export const SchedulerService = {
             let totalItems = 0;
             let totalValue = 0;
 
+            const formatDateForApi = (d: Date | null) => {
+                if (!d) return null;
+                const date = new Date(d);
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            };
+
             while (hasMore) {
                 // Rate limit
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                 const result = await AccurateServerService.fetchInvoices({
-                    owingStatus: 'UNPAID',
+                    owingStatus: scheduleSettings.invoiceStatus || 'UNPAID',
                     page,
-                    limit: 100
+                    limit: 100,
+                    branchId: scheduleSettings.branchId || null,
+                    fromDate: formatDateForApi(scheduleSettings.startDate),
+                    toDate: formatDateForApi(scheduleSettings.endDate)
                 }) as any;
 
                 if (result.error) {
