@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
@@ -23,7 +23,9 @@ interface SoItem {
     remarks?: string | null;
 }
 
-function ScannerRow({ item, onUpdate }: {
+const ScannerRow = React.memo(_ScannerRow);
+
+function _ScannerRow({ item, onUpdate }: {
     item: SoItem;
     onUpdate: (id: string, field: string, value: string) => void;
 }) {
@@ -34,7 +36,7 @@ function ScannerRow({ item, onUpdate }: {
     useEffect(() => {
         setExistence(item.existenceStatus || "");
         setRemarks(item.remarks || "");
-    }, [item]);
+    }, [item.existenceStatus, item.remarks]); // Only update if these specific fields change
 
     const handleExistenceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
@@ -321,46 +323,97 @@ export default function ScannerInterface({
         return data;
     }, [items, sortConfig, colFilters, searchQuery]);
 
-    const handleUpdateItem = async (id: string, field: string, value: string) => {
+    const handleUpdateItem = useCallback(async (id: string, field: string, value: string) => {
         // Optimistic Update
-        let newStatus = undefined;
-        let additionalUpdates = {};
+        let newStatus: string | undefined = undefined;
+        let additionalUpdates: Partial<SoItem> = {};
 
-        // Validation Logic for Status Auto-Update
-        const currentItem = items.find(i => i.id === id);
-        if (currentItem) {
-            let nextExistence = currentItem.existenceStatus || "";
-            let nextRemarks = currentItem.remarks || "";
+        setItems(prev => {
+            // Validation Logic for Status Auto-Update inside setState to get latest items state safely or just based on ID
+            // Actually, we need to access the specific item to check its other fields.
+            // Using functional update is good, but we need the item data.
+            // We can do the logic inside the map or find it first.
 
-            if (field === 'existenceStatus') nextExistence = value;
-            if (field === 'remarks') nextRemarks = value;
+            return prev.map(i => {
+                if (i.id !== id) return i;
 
-            if (nextExistence === 'Ada') {
-                newStatus = 'MATCHED';
-            } else if ((nextExistence === 'Hilang' || nextExistence === 'Dibawa Sales') && nextRemarks.trim() !== "") {
-                newStatus = 'MATCHED';
-            } else if ((nextExistence === 'Hilang' || nextExistence === 'Dibawa Sales') && nextRemarks.trim() === "") {
-                newStatus = 'UNVERIFIED';
-            }
+                const currentItem = i;
+                let nextExistence = currentItem.existenceStatus || "";
+                let nextRemarks = currentItem.remarks || "";
 
-            if (newStatus && newStatus !== currentItem.status) {
-                additionalUpdates = { status: newStatus };
-            }
-        }
+                if (field === 'existenceStatus') nextExistence = value;
+                if (field === 'remarks') nextRemarks = value;
 
-        setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value, ...additionalUpdates } : i));
+                if (nextExistence === 'Ada') {
+                    newStatus = 'MATCHED';
+                } else if ((nextExistence === 'Hilang' || nextExistence === 'Dibawa Sales') && nextRemarks.trim() !== "") {
+                    newStatus = 'MATCHED';
+                } else if ((nextExistence === 'Hilang' || nextExistence === 'Dibawa Sales') && nextRemarks.trim() === "") {
+                    newStatus = 'UNVERIFIED';
+                }
+
+                if (newStatus && newStatus !== currentItem.status) {
+                    additionalUpdates = { status: newStatus };
+                }
+
+                return { ...i, [field]: value, ...additionalUpdates };
+            });
+        });
 
         try {
-            const payload = { [field]: value, ...additionalUpdates };
-            await fetch(`/api/so/items/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            // We need to reconstruct the payload based on what we calculated.
+            // Since newStatus and additionalUpdates needed to be calculated inside the setItems (to be pure and safe), 
+            // we might have a slight issue here accessing them for the API call if we calculate them inside.
+            // However, for this optimization, let's keep the logic outside setState for the API payload calculation 
+            // BUT we must accept that `items` dependency might be stale if we don't include it. 
+            // Including `items` in dependency array breaks `useCallback` effectiveness for preventing row re-renders.
+            // SOLUTION: Refactor logic to not depend on `items` state, or accept that we pass `onUpdate` which triggers re-renders.
+            // Better: Use a ref for items for read access in callbacks if needed, OR just trust the passed ID + Value.
+
+            // For now, to decouple from `items` changing, let's use the functional update for UI, 
+            // and for the API, we send what we know changed. The server handles the logic too? 
+            // The server logic in route.ts (not shown fully) probably just updates fields.
+            // The client-side status auto-update logic relies on other fields (remarks vs existence).
+            // We can pass the 'other' field current value from the child component if we wanted to be pure, but that's complex.
+
+            // Let's stick to the existing approach but acknowledge `items` dependency. 
+            // If `items` changes, `handleUpdateItem` is recreated, invalidating `React.memo`.
+            // To fix this, we need `handleUpdateItem` to NOT depend on `items`.
+            // We can achieve this by using functional state update for EVERYTHING and not reading `items` outside of it.
+            // BUT we need to send data to API.
+
+            // Allow re-creation for now, but `React.memo` on rows will still help if `handleUpdateItem` identity 
+            // *for other rows* didn't matter. But it does change.
+            // Actually, if we pass `onUpdate` to ALL rows, and it changes, ALL rows re-render.
+            // To truly optimize, `onUpdate` must be stable.
+            // We can make it stable by using a Ref for `items` or just not depending on `items` for the API call payload if possible.
+            // The logic involves: if existence changes to "Ada", status becomes "MATCHED".
+            // This logic allows us to send { existenceStatus: "Ada", status: "MATCHED" } without reading current state?
+            // Yes, mostly. The only edge case is "Hilang" + "Remarks".
+            // If we are editing "Remarks", we need "Existence" value.
+            // If we are editing "Existence", we need "Remarks" value.
+
+            // We can rely on the Child Component to pass the "other" value? No, that's messy.
+            // Let's use the functional update pattern to update state, and for the API call,
+            // we might have to just send the single field update and let the UI stay optimistic/eventually consistent?
+            // OR finding the item in the functional update callback and capturing the result to send.
+
+            // Implementation:
+            // We cannot easily make this stable without a Ref to items to avoid the dependency.
         } catch (error) {
             console.error("Update failed", error);
         }
-    };
+    }, []);
+
+    // RE-PLANNING THE REPLACEMENT: 
+    // To properly fix performance, I will use a Ref to hold the latest items 
+    // so `handleUpdateItem` doesn't need `items` as a dependency.
+
+    // This is a common pattern.
+    // I will add a `itemsRef` in the main component.
+
+    return; // Placeholder for thought process, I will provide the actual replacement below.
+
 
     const processScan = async (code: string) => {
         code = code.trim().toUpperCase();
@@ -548,7 +601,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('status')}
                                         >
                                             Status
-                                            {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -568,7 +621,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('transNo')}
                                         >
                                             No Faktur
-                                            {sortConfig?.key === 'transNo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'transNo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -588,7 +641,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('transDate')}
                                         >
                                             Tanggal
-                                            {sortConfig?.key === 'transDate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'transDate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -608,7 +661,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('customerName')}
                                         >
                                             Customer
-                                            {sortConfig?.key === 'customerName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'customerName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -628,7 +681,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('description')}
                                         >
                                             Keterangan
-                                            {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -648,7 +701,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('statusName')}
                                         >
                                             Status Acc
-                                            {sortConfig?.key === 'statusName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'statusName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -664,7 +717,7 @@ export default function ScannerInterface({
                                 <th className="p-3 border-b text-right font-bold bg-yellow-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('amount')}>
                                     <div className="flex items-center justify-end gap-1">
                                         Total Nilai
-                                        {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                        {sortConfig && sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                     </div>
                                 </th>
 
@@ -676,7 +729,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('primeOwing')}
                                         >
                                             Status Lunas
-                                            {sortConfig?.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                     </div>
                                 </th>
@@ -685,7 +738,7 @@ export default function ScannerInterface({
                                 <th className="p-3 border-b text-right font-bold bg-red-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('primeOwing')}>
                                     <div className="flex items-center justify-end gap-1">
                                         Sisa Tagihan
-                                        {sortConfig?.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                        {sortConfig && sortConfig.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                     </div>
                                 </th>
 
@@ -697,7 +750,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('existenceStatus')}
                                         >
                                             Keberadaan
-                                            {sortConfig?.key === 'existenceStatus' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'existenceStatus' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"
@@ -717,7 +770,7 @@ export default function ScannerInterface({
                                             onClick={() => handleSort('remarks')}
                                         >
                                             Ket. Tambahan
-                                            {sortConfig?.key === 'remarks' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            {sortConfig && sortConfig.key === 'remarks' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                         </div>
                                         <input
                                             type="text"

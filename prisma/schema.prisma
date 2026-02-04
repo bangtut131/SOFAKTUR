@@ -21,6 +21,9 @@ model SoSession {
   
   // Relations
   items            SoItem[]
+
+  @@index([createdAt])
+  @@index([status])
 }
 
 model User {
@@ -64,6 +67,7 @@ model SoItem {
   
   @@index([sessionId])
   @@index([transNo])
+  @@index([sessionId, transNo]) // Composite index for scan lookup
 }
 
 model Customer {
