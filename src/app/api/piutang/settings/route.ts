@@ -66,7 +66,8 @@ export async function POST(request: Request) {
                     cronExpression,
                     isEnabled,
                     messageTemplate,
-                    // name // usually immutable
+                    type,
+                    name
                 }
             });
             await SchedulerService.initScheduler();
