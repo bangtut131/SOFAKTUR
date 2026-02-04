@@ -16,9 +16,11 @@ export async function POST(request: Request) {
 
         // Simple cookie session
         const cookieStore = await cookies();
-        cookieStore.set('user_role', user.role);
-        cookieStore.set('user_id', user.id);
-        cookieStore.set('username', user.username);
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        cookieStore.set('user_role', user.role, { path: '/', maxAge: oneDay });
+        cookieStore.set('user_id', user.id, { path: '/', maxAge: oneDay });
+        cookieStore.set('username', user.username, { path: '/', maxAge: oneDay });
 
         return NextResponse.json({ success: true, role: user.role });
     } catch (error: any) {

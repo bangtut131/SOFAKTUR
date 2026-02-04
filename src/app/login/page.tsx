@@ -33,8 +33,8 @@ export default function LoginPage() {
 
             if (data.success) {
                 console.log("Redirecting to dashboard...");
-                router.push('/dashboard');
-                // Removed router.refresh() to prevent race conditions/double loading
+                // Force hard refresh to ensure cookies are applied
+                window.location.href = '/dashboard';
             } else {
                 setError(data.error || "Login gagal");
                 setLoading(false); // Only set loading false on failure/error
