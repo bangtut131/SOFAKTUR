@@ -155,7 +155,7 @@ export default function PiutangSettingsPage() {
     const handleAddNew = () => {
         const newSchedule = {
             id: null,
-            name: "New Schedule",
+            name: `New Schedule ${new Date().getTime().toString().slice(-4)}`,
             type: 'BROADCAST',
             cronExpression: "0 9 * * 1",
             isEnabled: false,
