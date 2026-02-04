@@ -65,7 +65,7 @@ function _ScannerRow({ item, onUpdate }: {
     };
 
     return (
-        <tr className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''}`}>
+        <tr id={`row-${item.transNo}`} className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''}`}>
             <td className="p-3">
                 {item.status === 'MATCHED' ? (
                     <span className="inline-flex items-center gap-1 text-green-700 font-bold text-xs bg-green-200 px-2 py-1 rounded">
@@ -140,7 +140,7 @@ function _ScannerRow({ item, onUpdate }: {
     );
 }
 
-function ScannerCard({ item, onUpdate }: {
+const ScannerCard = React.memo(function ScannerCard({ item, onUpdate }: {
     item: SoItem;
     onUpdate: (id: string, field: string, value: string) => void;
 }) {
@@ -170,7 +170,7 @@ function ScannerCard({ item, onUpdate }: {
     };
 
     return (
-        <div className={`bg-white p-4 rounded-lg shadow-sm border mb-3 ${item.status === 'MATCHED' ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200'}`}>
+        <div id={`card-${item.transNo}`} className={`bg-white p-4 rounded-lg shadow-sm border mb-3 ${item.status === 'MATCHED' ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200'}`}>
             <div className="flex justify-between items-start mb-2">
                 <div>
                     <div className="font-mono font-bold text-lg text-blue-600">{item.transNo}</div>
@@ -237,7 +237,7 @@ function ScannerCard({ item, onUpdate }: {
             )}
         </div>
     )
-}
+});
 
 export default function ScannerInterface({
     sessionId,
@@ -409,6 +409,17 @@ export default function ScannerInterface({
                         existenceStatus: 'Ada' // Default
                     } : inv
                 ));
+
+                // Auto Scroll to Item
+                setTimeout(() => {
+                    const element = document.getElementById(`row-${code}`) || document.getElementById(`card-${code}`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Optional: Add a flash effect via class manipulation if needed, but styling is enough for now
+                        element.classList.add('bg-blue-50');
+                        setTimeout(() => element.classList.remove('bg-blue-50'), 2000);
+                    }
+                }, 100);
             } else {
                 alert(data.error);
             }
