@@ -5,11 +5,17 @@ const prisma = new PrismaClient();
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const branchId = searchParams.get('branchId');
+
+        const where: any = { status: 'OPEN', outstanding: { gt: 100 } };
+        if (branchId) where.branchId = branchId;
+
         // Fetch Stats based on persisted data
         const rawReceivables = await prisma.receivable.findMany({
-            where: { status: 'OPEN', outstanding: { gt: 100 } },
+            where,
             include: { customer: true },
             orderBy: { outstanding: 'desc' }
         });

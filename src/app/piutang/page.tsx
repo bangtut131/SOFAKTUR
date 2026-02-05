@@ -46,14 +46,15 @@ export default function PiutangPage() {
         fetchBranches();
     }, []);
 
-    // Initial Load (Get Stored Data)
+    // Load Data when Branch Changes
     useEffect(() => {
         fetchStoredData();
-    }, []);
+    }, [selectedBranch]);
 
     const fetchStoredData = async () => {
         try {
-            const res = await fetch('/api/piutang');
+            const query = selectedBranch ? `?branchId=${selectedBranch}` : '';
+            const res = await fetch(`/api/piutang${query}`);
             if (res.ok) {
                 const data = await res.json();
                 setStats(data.stats);

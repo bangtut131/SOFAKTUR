@@ -152,18 +152,24 @@ export async function POST(request: Request) {
         const currentInvoiceNos = allInvoices.map(i => i.transNo);
 
         // Update DB: Mark invoices NOT in currentInvoiceNos as PAID (if they are currently OPEN)
+        // Update DB: Mark invoices NOT in currentInvoiceNos as PAID (if they are currently OPEN)
+        // CRITICAL FIX: Only for the current branch if specified!
+        const deleteWhere: any = {
+            status: 'OPEN',
+            transNo: { notIn: currentInvoiceNos }
+        };
+        if (branchId) {
+            deleteWhere.branchId = branchId;
+        }
+
         await prisma.receivable.updateMany({
-            where: {
-                status: 'OPEN',
-                transNo: { notIn: currentInvoiceNos }
-            },
+            where: deleteWhere,
             data: { status: 'PAID', lastSyncedAt: now }
         });
 
         // 3. Upsert current invoices
         console.log(`[PIUTANG SYNC] Upserting ${allInvoices.length} invoices...`);
 
-        // Use transaction or sequential to avoid locking if SQLite
         // Use transaction or sequential to avoid locking if SQLite
         // Optimized: Batch processing for Postgres (Railway)
         const INVOICE_BATCH_SIZE = 50;
@@ -184,7 +190,8 @@ export async function POST(request: Request) {
                     update: {
                         outstanding: outstanding,
                         status: 'OPEN',
-                        lastSyncedAt: now
+                        lastSyncedAt: now,
+                        branchId: inv.branchId || null // Added branchId
                     },
                     create: {
                         customerId: customerDbId,
@@ -194,14 +201,15 @@ export async function POST(request: Request) {
                         amount: amount,
                         outstanding: outstanding,
                         status: 'OPEN',
-                        lastSyncedAt: now
+                        lastSyncedAt: now,
+                        branchId: inv.branchId || null // Added branchId
                     }
                 });
             }));
         }
 
         // Return latest stats
-        const finalStats = await getPiutangStats();
+        const finalStats = await getPiutangStats(branchId);
 
         return NextResponse.json({
             success: true,
@@ -226,9 +234,12 @@ function convertDate(dateStr: string): Date {
 }
 
 // Shared helper (move to service later if needed)
-async function getPiutangStats() {
+async function getPiutangStats(branchId?: string) {
+    const where: any = { status: 'OPEN', outstanding: { gt: 100 } };
+    if (branchId) where.branchId = branchId;
+
     const rawReceivables = await prisma.receivable.findMany({
-        where: { status: 'OPEN', outstanding: { gt: 100 } }, // Ignore dust
+        where: where, // Ignore dust & filter branch
         include: { customer: true },
         orderBy: { outstanding: 'desc' }
     });
