@@ -106,11 +106,22 @@ export const SchedulerService = {
             let branches = await AccurateServerService.getBranches();
 
             // Filter by branch if defined in schedule
+            // Initialize sync params with defaults
+            let syncInvoiceStatus = 'UNPAID';
+            let syncStartDate: string | undefined;
+            let syncEndDate: string | undefined;
+
+            // Filter by branch and load params if defined in schedule
             if (scheduleId) {
                 const schedule = await prisma.broadcastSchedule.findUnique({ where: { id: scheduleId } });
-                if (schedule && schedule.branchId) {
-                    branches = branches.filter(b => String(b.id) === String(schedule.branchId));
-                    console.log(`[SYNC] Filtering for specific branch: ${schedule.branchId}. Found: ${branches.length}`);
+                if (schedule) {
+                    if (schedule.branchId) {
+                        branches = branches.filter(b => String(b.id) === String(schedule.branchId));
+                        console.log(`[SYNC] Filtering for specific branch: ${schedule.branchId}. Found: ${branches.length}`);
+                    }
+                    syncInvoiceStatus = schedule.invoiceStatus || 'UNPAID';
+                    syncStartDate = schedule.startDate ? new Date(schedule.startDate).toISOString().split('T')[0] : undefined;
+                    syncEndDate = schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : undefined;
                 }
             }
 
@@ -162,7 +173,9 @@ export const SchedulerService = {
                     while (retryCount < maxRetries) {
                         try {
                             res = await AccurateServerService.fetchInvoices({
-                                owingStatus: 'UNPAID',
+                                owingStatus: syncInvoiceStatus,
+                                fromDate: syncStartDate,
+                                toDate: syncEndDate,
                                 page: page,
                                 limit: 100,
                                 branchId: String(branch.id)
