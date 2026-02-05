@@ -27,17 +27,23 @@ export const SchedulerService = {
     jobs: {} as Record<string, any>,
 
     async initScheduler() {
-        console.log("Initializing Scheduler...");
+        // Log current time in Jakarta to verify environment
+        const jakartaTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+        console.log(`Initializing Scheduler... Current Jakarta Time: ${jakartaTime}`);
+
         Object.values(this.jobs).forEach(job => job.stop());
         this.jobs = {};
         try {
             const schedules = await prisma.broadcastSchedule.findMany({ where: { isEnabled: true } });
             schedules.forEach(schedule => {
                 if (cron.validate(schedule.cronExpression)) {
+                    // Explicitly set timezone to Asia/Jakarta
                     const task = cron.schedule(schedule.cronExpression, async () => {
                         if (schedule.type === 'SYNC') await this.runSyncJob(schedule.id);
                         else if (schedule.type === 'BROADCAST') await this.runBroadcastJob(schedule.id);
                         else if (schedule.type === 'SO_SYNC') await this.runSoSyncJob(schedule.id);
+                    }, {
+                        timezone: "Asia/Jakarta"
                     });
                     this.jobs[schedule.id] = task;
                 }
