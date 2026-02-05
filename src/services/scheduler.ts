@@ -254,11 +254,18 @@ export const SchedulerService = {
                                     if (customer) {
                                         await prisma.receivable.upsert({
                                             where: { transNo: inv.transNo },
-                                            update: { outstanding: inv.outstanding, amount: inv.amount, lastSyncedAt: new Date(), status: inv.outstanding <= 0 ? 'PAID' : 'OPEN' },
+                                            update: {
+                                                outstanding: inv.outstanding,
+                                                amount: inv.amount,
+                                                lastSyncedAt: new Date(),
+                                                status: inv.outstanding <= 0 ? 'PAID' : 'OPEN',
+                                                branchId: inv.branchId || null
+                                            },
                                             create: {
                                                 customerId: customer.id, transNo: inv.transNo,
                                                 transDate: parseDate(inv.transDate), dueDate: parseDate(inv.dueDate),
-                                                amount: inv.amount, outstanding: inv.outstanding, status: 'OPEN'
+                                                amount: inv.amount, outstanding: inv.outstanding, status: 'OPEN',
+                                                branchId: inv.branchId || null
                                             }
                                         });
                                         // totalProcessed++; // Atomic increment or just add batch length later? 
@@ -290,8 +297,11 @@ export const SchedulerService = {
 
             // Phase 4: Mark stale invoices as PAID
             // Any invoice in DB with status OPEN that wasn't returned by API means it's been paid
+            // IMPORTANT: Only for branches we actually synced!
+            const syncedBranchIds = branches.map(b => String(b.id)); // All branches we attempted to sync
+
             await this.updateStatus(`Memperbarui status lunas...`, totalProcessed, grandTotal, 'MARKING_PAID');
-            console.log(`[SYNC] Phase 4: Marking stale invoices as PAID...`);
+            console.log(`[SYNC] Phase 4: Marking stale invoices as PAID for branches: ${syncedBranchIds.join(', ')}`);
 
             const markPaidResult = await prisma.receivable.updateMany({
                 where: {
@@ -299,7 +309,10 @@ export const SchedulerService = {
                     outstanding: { gt: 0 },
                     lastSyncedAt: {
                         lt: new Date(Date.now() - 5 * 60 * 1000) // Not synced in last 5 minutes
-                    }
+                    },
+                    // SAFEGUARD: Only close invoices if they belong to the branches we just synced
+                    // If we didn't sync Branch B, we must NOT close its invoices just because they weren't in the result
+                    branchId: { in: syncedBranchIds }
                 },
                 data: {
                     status: 'PAID',

@@ -93,6 +93,7 @@ model Receivable {
   dueDate         DateTime
   amount          Float
   outstanding     Float
+  branchId        String?
   
   status          String   @default("OPEN") // OPEN, PAID
   lastSyncedAt    DateTime @default(now())
