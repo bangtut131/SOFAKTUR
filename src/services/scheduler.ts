@@ -103,7 +103,17 @@ export const SchedulerService = {
 
             // Phase 2: Get branches and count total invoices
             await this.updateStatus("Menghitung total invoice...", 0, 0, 'COUNTING');
-            const branches = await AccurateServerService.getBranches();
+            let branches = await AccurateServerService.getBranches();
+
+            // Filter by branch if defined in schedule
+            if (scheduleId) {
+                const schedule = await prisma.broadcastSchedule.findUnique({ where: { id: scheduleId } });
+                if (schedule && schedule.branchId) {
+                    branches = branches.filter(b => String(b.id) === String(schedule.branchId));
+                    console.log(`[SYNC] Filtering for specific branch: ${schedule.branchId}. Found: ${branches.length}`);
+                }
+            }
+
             console.log(`[SYNC] Got ${branches.length} branches:`, branches.map(b => b.name));
 
             if (branches.length === 0) {

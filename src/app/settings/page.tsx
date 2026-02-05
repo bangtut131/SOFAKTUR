@@ -529,8 +529,8 @@ export default function SettingsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Parameters for SO_SYNC */}
-                                        {schedule.type === 'SO_SYNC' && (
+                                        {/* Parameters for SO_SYNC and SYNC */}
+                                        {(schedule.type === 'SO_SYNC' || schedule.type === 'SYNC') && (
                                             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
                                                 <h4 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2"><Key size={14} /> Parameter Auto-Sync</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -547,39 +547,43 @@ export default function SettingsPage() {
                                                             ))}
                                                         </select>
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Status Invoice</label>
-                                                        <select
-                                                            className="w-full p-2 border rounded text-sm text-gray-900"
-                                                            value={schedule.invoiceStatus || "UNPAID"}
-                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, invoiceStatus: e.target.value } : s))}
-                                                        >
-                                                            <option value="UNPAID">Belum Lunas (Unpaid)</option>
-                                                            <option value="PAID">Lunas (Paid)</option>
-                                                            <option value="ALL">Semua Status</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Dari Tanggal (Opsional)</label>
-                                                        <input
-                                                            type="date"
-                                                            className="w-full p-2 border rounded text-sm text-gray-900"
-                                                            value={schedule.startDate ? new Date(schedule.startDate).toISOString().split('T')[0] : ''}
-                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, startDate: e.target.value ? new Date(e.target.value) : null } : s))}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-bold text-gray-600 mb-1">Sampai Tanggal (Opsional)</label>
-                                                        <input
-                                                            type="date"
-                                                            className="w-full p-2 border rounded text-sm text-gray-900"
-                                                            value={schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : ''}
-                                                            onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, endDate: e.target.value ? new Date(e.target.value) : null } : s))}
-                                                        />
-                                                    </div>
+                                                    {schedule.type === 'SO_SYNC' && (
+                                                        <>
+                                                            <div>
+                                                                <label className="block text-xs font-bold text-gray-600 mb-1">Status Invoice</label>
+                                                                <select
+                                                                    className="w-full p-2 border rounded text-sm text-gray-900"
+                                                                    value={schedule.invoiceStatus || "UNPAID"}
+                                                                    onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, invoiceStatus: e.target.value } : s))}
+                                                                >
+                                                                    <option value="UNPAID">Belum Lunas (Unpaid)</option>
+                                                                    <option value="PAID">Lunas (Paid)</option>
+                                                                    <option value="ALL">Semua Status</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-bold text-gray-600 mb-1">Dari Tanggal (Opsional)</label>
+                                                                <input
+                                                                    type="date"
+                                                                    className="w-full p-2 border rounded text-sm text-gray-900"
+                                                                    value={schedule.startDate ? new Date(schedule.startDate).toISOString().split('T')[0] : ''}
+                                                                    onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, startDate: e.target.value ? new Date(e.target.value) : null } : s))}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-bold text-gray-600 mb-1">Sampai Tanggal (Opsional)</label>
+                                                                <input
+                                                                    type="date"
+                                                                    className="w-full p-2 border rounded text-sm text-gray-900"
+                                                                    value={schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : ''}
+                                                                    onChange={(e) => setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, endDate: e.target.value ? new Date(e.target.value) : null } : s))}
+                                                                />
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                                 <p className="text-xs text-blue-600 mt-2 italic">
-                                                    * Jika tanggal dikosongkan, sistem akan sync semua data sesuai status yang dipilih.
+                                                    * Jika cabang tidak dipilih, akan sinkronisasi SEMUA cabang.
                                                 </p>
                                             </div>
                                         )}
