@@ -528,8 +528,8 @@ export default function ScannerInterface({
                         <ArrowLeft />
                     </button>
                     <div>
-                        <h1 className="font-bold text-lg">{periodName}</h1>
-                        <p className="text-xs text-gray-500">Mode Scanning (v1.2)</p>
+                        <h1 className="font-bold text-lg text-black">{periodName}</h1>
+                        <p className="text-xs text-gray-600">Mode Scanning (v1.2)</p>
                     </div>
                 </div>
 
@@ -589,7 +589,7 @@ export default function ScannerInterface({
                             type="text"
                             value={scanInput}
                             onChange={(e) => setScanInput(e.target.value)}
-                            className="w-full p-3 pl-10 border-2 border-blue-200 rounded-lg text-lg font-mono focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition outline-none placeholder-gray-500"
+                            className="w-full p-3 pl-10 border-2 border-blue-200 rounded-lg text-lg font-mono text-black focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition outline-none placeholder-gray-600"
                             placeholder="SCAN BARCODE..."
                         />
                     </div>
