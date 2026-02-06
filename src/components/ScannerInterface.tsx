@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
-import { TableVirtuoso, Virtuoso } from "react-virtuoso";
+import { TableVirtuoso } from "react-virtuoso";
 
 interface SoItem {
     id: string;
@@ -24,6 +24,20 @@ interface SoItem {
     remarks?: string | null;
 }
 
+const COLUMNS = [
+    { key: 'status', label: 'Status', width: 100 },
+    { key: 'transNo', label: 'No Faktur', width: 140 },
+    { key: 'transDate', label: 'Tanggal', width: 100 },
+    { key: 'customerName', label: 'Customer', width: 180 },
+    { key: 'description', label: 'Keterangan', width: 200 },
+    { key: 'statusName', label: 'Status Acc', width: 100 },
+    { key: 'amount', label: 'Total Nilai', width: 120, align: 'right' },
+    { key: 'primeOwing', label: 'Status Lunas', width: 100, align: 'center' }, // Logic based
+    { key: 'primeOwing', label: 'Sisa Tagihan', width: 120, align: 'right' },
+    { key: 'existenceStatus', label: 'Keberadaan', width: 130 },
+    { key: 'remarks', label: 'Ket. Tambahan', width: 200 }
+];
+
 const ScannerRow = React.memo(_ScannerRow);
 
 function _ScannerRow({ item, onUpdate }: {
@@ -37,7 +51,7 @@ function _ScannerRow({ item, onUpdate }: {
     useEffect(() => {
         setExistence(item.existenceStatus || "");
         setRemarks(item.remarks || "");
-    }, [item.existenceStatus, item.remarks]); // Only update if these specific fields change
+    }, [item.existenceStatus, item.remarks]);
 
     const handleExistenceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
@@ -68,7 +82,7 @@ function _ScannerRow({ item, onUpdate }: {
     return (
         <tr id={`row-${item.transNo}`} className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''}`}>
             {/* Status */}
-            <td className="p-3 w-[100px]">
+            <td className="p-3">
                 {item.status === 'MATCHED' ? (
                     <span className="inline-flex items-center gap-1 text-green-700 font-bold text-xs bg-green-200 px-2 py-1 rounded">
                         <CheckCircle size={12} /> OK
@@ -80,35 +94,35 @@ function _ScannerRow({ item, onUpdate }: {
                 )}
             </td>
             {/* No Faktur */}
-            <td className="p-3 font-mono font-bold text-blue-600 w-[140px]">
+            <td className="p-3 font-mono font-bold text-blue-600">
                 {item.transNo}
             </td>
             {/* Tanggal */}
-            <td className="p-3 text-gray-600 w-[100px]">
+            <td className="p-3 text-gray-600">
                 {item.transDate}
                 {item.dueDate && <div className="text-[10px] text-red-500">Due: {item.dueDate}</div>}
             </td>
             {/* Customer */}
-            <td className="p-3 w-[180px]">
+            <td className="p-3">
                 <div className={`font-bold px-2 py-1 rounded inline-block text-sm ${getCustomerStyle()}`}>
                     {item.customerName}
                 </div>
             </td>
             {/* Keterangan */}
-            <td className="p-3 text-gray-500 max-w-[150px] w-[150px] truncate" title={item.description || ''}>
+            <td className="p-3 text-gray-500 truncate" title={item.description || ''}>
                 {item.description || '-'}
             </td>
             {/* Status Acc */}
-            <td className="p-3 w-[100px]">
+            <td className="p-3">
                 <div className="font-bold text-gray-700">{item.statusName || '-'}</div>
                 <div className="text-[10px] text-gray-400">{item.approvalStatus}</div>
             </td>
             {/* Total Nilai */}
-            <td className="p-3 text-right font-mono font-bold text-gray-700 bg-yellow-50/50 w-[120px]">
+            <td className="p-3 text-right font-mono font-bold text-gray-700 bg-yellow-50/50">
                 {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(item.amount)}
             </td>
             {/* Status Lunas */}
-            <td className="p-3 text-center w-[100px]">
+            <td className="p-3 text-center">
                 {item.primeOwing > 0 ? (
                     <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full border border-red-200">
                         BELUM
@@ -120,11 +134,11 @@ function _ScannerRow({ item, onUpdate }: {
                 )}
             </td>
             {/* Sisa Tagihan */}
-            <td className="p-3 text-right font-mono font-bold text-red-600 bg-red-50/50 w-[120px]">
+            <td className="p-3 text-right font-mono font-bold text-red-600 bg-red-50/50">
                 {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(item.primeOwing)}
             </td>
             {/* Keberadaan */}
-            <td className="p-3 w-[130px]">
+            <td className="p-3">
                 <select
                     className={`w-full text-xs p-1 border rounded font-bold ${existence === 'Ada' ? 'bg-green-100 text-green-800 border-green-300' : existence === 'Hilang' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-white border-gray-300 text-gray-900'}`}
                     value={existence}
@@ -137,7 +151,7 @@ function _ScannerRow({ item, onUpdate }: {
                 </select>
             </td>
             {/* Ket. Tambahan */}
-            <td className="p-3 w-[180px]">
+            <td className="p-3">
                 <input
                     type="text"
                     className="w-full text-xs p-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 text-gray-900"
@@ -448,101 +462,100 @@ export default function ScannerInterface({
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
-    // Filtering for Display
-    const filteredItems = items.filter(i =>
-        i.transNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        i.customerName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-
     const handleExport = () => {
         window.open(`/api/so/sessions/${sessionId}/export`, '_blank');
     };
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white p-4 shadow-sm border-b flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 z-20 gap-4">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <button onClick={() => router.push('/dashboard')} className="p-2 bg-white text-gray-800 border border-gray-200 rounded-full hover:bg-gray-100 shadow-sm transition">
+            {showCamera && (
+                <div className="fixed inset-0 z-50 bg-black">
+                    <button
+                        onClick={() => setShowCamera(false)}
+                        className="absolute top-4 right-4 z-50 p-2 bg-white rounded-full text-black"
+                    >
                         <ArrowLeft />
                     </button>
-                    <div className="flex-1">
-                        <h1 className="text-lg font-bold text-gray-800 leading-tight">{periodName}</h1>
+                    <CameraScanner
+                        onScan={(code) => {
+                            setShowCamera(false);
+                            processScan(code);
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* Header / Top Bar */}
+            <div className="bg-white p-4 border-b flex flex-col md:flex-row gap-4 items-center shrink-0 shadow-sm z-10">
+                <div className="flex items-center w-full md:w-auto gap-4">
+                    <button onClick={() => router.push('/dashboard')} className="p-2 border rounded-full hover:bg-gray-100 transition">
+                        <ArrowLeft />
+                    </button>
+                    <div>
+                        <h1 className="font-bold text-lg">{periodName}</h1>
                         <p className="text-xs text-gray-500">Mode Scanning (v1.2)</p>
                     </div>
-                    <button
-                        onClick={handleExport}
-                        className="md:hidden bg-green-100 text-green-700 p-2 rounded-lg"
-                        title="Download Excel"
-                    >
-                        <Download size={20} />
-                    </button>
                 </div>
 
-                <div className="w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                    <div className="flex gap-2">
-                        <div className="bg-blue-100 px-3 py-1 rounded border border-blue-200 text-center min-w-[60px]">
-                            <div className="text-[10px] uppercase font-bold text-blue-700">Total</div>
-                            <div className="text-lg md:text-xl font-mono font-bold text-blue-800">{items.length}</div>
-                        </div>
-                        <div className="bg-yellow-100 px-3 py-1 rounded border border-yellow-200 text-center min-w-[60px]">
-                            <div className="text-[10px] uppercase font-bold text-yellow-700">Pending</div>
-                            <div className="text-lg md:text-xl font-mono font-bold text-yellow-800">{pendingCount}</div>
-                        </div>
-                        <div className=" bg-green-100 px-3 py-1 rounded border border-green-200 text-center min-w-[60px]">
-                            <div className="text-[10px] uppercase font-bold text-green-700">OK</div>
-                            <div className="text-lg md:text-xl font-mono font-bold text-green-800">{matchedCount}</div>
-                        </div>
-                        {/* Breakdown Stats */}
-                        <div className=" bg-blue-100 px-3 py-1 rounded border border-blue-200 text-center ml-2 border-l-2 border-l-blue-300 min-w-[60px]">
-                            <div className="text-[10px] uppercase font-bold text-blue-700">Ada</div>
-                            <div className="text-lg md:text-xl font-mono font-bold text-blue-800">{adas}</div>
-                        </div>
-                        <div className=" bg-red-100 px-3 py-1 rounded border border-red-200 text-center min-w-[60px]">
-                            <div className="text-[10px] uppercase font-bold text-red-700">Hilang</div>
-                            <div className="text-lg md:text-xl font-mono font-bold text-red-800">{hilangs}</div>
-                        </div>
-                        <div className=" bg-orange-100 px-3 py-1 rounded border border-orange-200 text-center min-w-[60px]">
-                            <div className="text-[10px] uppercase font-bold text-orange-700">Sales</div>
-                            <div className="text-lg md:text-xl font-mono font-bold text-orange-800">{sales}</div>
-                        </div>
+                <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                    <div className="px-4 py-2 bg-blue-50 rounded-lg text-center min-w-[80px]">
+                        <div className="text-[10px] uppercase font-bold text-blue-500">Total</div>
+                        <div className="font-bold text-xl text-blue-700">{items.length}</div>
+                    </div>
+                    <div className="px-4 py-2 bg-yellow-50 rounded-lg text-center min-w-[80px]">
+                        <div className="text-[10px] uppercase font-bold text-yellow-600">Pending</div>
+                        <div className="font-bold text-xl text-yellow-700">{pendingCount}</div>
+                    </div>
+                    <div className="px-4 py-2 bg-green-50 rounded-lg text-center min-w-[80px]">
+                        <div className="text-[10px] uppercase font-bold text-green-600">OK</div>
+                        <div className="font-bold text-xl text-green-700">{matchedCount}</div>
+                    </div>
+
+                    <div className="w-px bg-gray-300 mx-2"></div>
+
+                    <div className="px-3 py-1 bg-blue-100 rounded text-center min-w-[60px]">
+                        <div className="text-[10px] font-bold text-blue-800">ADA</div>
+                        <div className="font-bold text-lg text-blue-900">{adas}</div>
+                    </div>
+                    <div className="px-3 py-1 bg-red-100 rounded text-center min-w-[60px]">
+                        <div className="text-[10px] font-bold text-red-800">HILANG</div>
+                        <div className="font-bold text-lg text-red-900">{hilangs}</div>
+                    </div>
+                    <div className="px-3 py-1 bg-orange-100 rounded text-center min-w-[60px]">
+                        <div className="text-[10px] font-bold text-orange-800">SALES</div>
+                        <div className="font-bold text-lg text-orange-900">{sales}</div>
                     </div>
                 </div>
 
-                <div className="hidden md:flex items-center gap-2">
+                <div className="flex gap-2 ml-auto">
                     <button
                         onClick={handleExport}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-bold text-sm shadow-md flex items-center gap-2 transform transition hover:scale-105 mr-2"
-                        title="Download Rekap Excel"
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition"
                     >
-                        <Download size={18} />
-                        Excel
+                        <Download size={18} /> Excel
                     </button>
-
                     <button
-                        onClick={() => router.push(`/so/adjustment/${sessionId}`)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-bold text-sm shadow-md flex items-center gap-2 transform transition hover:scale-105"
+                        onClick={() => router.push(`/so/sessions/${sessionId}/approve`)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition"
                     >
                         Selesai Scan <ArrowRight size={18} />
                     </button>
                 </div>
-            </header>
+            </div>
 
-            {/* Scan Area */}
-            <div className="bg-white p-4 shadow-sm border-b shrink-0 z-10 sticky top-0">
-                <form onSubmit={handleManualScan} className="relative flex gap-2">
+            {/* Input Bar */}
+            <div className="bg-white p-4 border-b shadow-sm z-10">
+                <form onSubmit={handleManualScan} className="flex gap-2">
                     <div className="relative flex-1">
+                        <Scan className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
                         <input
                             ref={inputRef}
                             type="text"
                             value={scanInput}
                             onChange={(e) => setScanInput(e.target.value)}
-                            className="w-full h-12 px-10 border-2 border-blue-500 rounded-lg text-lg font-mono font-bold focus:outline-none focus:ring-4 focus:ring-blue-100 text-black placeholder-gray-500 shadow-inner"
+                            className="w-full p-3 pl-10 border-2 border-blue-200 rounded-lg text-lg font-mono focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition outline-none"
                             placeholder="SCAN BARCODE..."
-                            autoFocus
                         />
-                        <Scan className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 w-6 h-6" />
                     </div>
                     <button
                         type="button"
@@ -574,198 +587,42 @@ export default function ScannerInterface({
                         style={{ height: 'calc(100vh - 250px)' }}
                         data={processedItems}
                         components={{
-                            Table: (props) => <table {...props} className="w-full table-fixed border-collapse min-w-[1600px]" />
+                            Table: (props) => (
+                                <table {...props} className="w-full border-collapse table-fixed" style={{ minWidth: 1550 }}>
+                                    <colgroup>
+                                        {COLUMNS.map((col, idx) => (
+                                            <col key={idx} style={{ width: col.width }} />
+                                        ))}
+                                    </colgroup>
+                                    {props.children}
+                                </table>
+                            )
                         }}
                         fixedHeaderContent={() => (
                             <tr className="bg-gray-100 text-gray-600 border-b shadow-sm">
-                                {/* Status SO */}
-                                <th className="p-3 border-b align-top w-[100px] bg-gray-100">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('status')}
-                                        >
-                                            Status
-                                            {sortConfig && sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                {COLUMNS.map((col, idx) => (
+                                    <th key={idx} className={`p-3 border-b align-top bg-gray-100 ${idx > 0 ? 'border-l border-gray-200' : ''}`}>
+                                        <div className="flex flex-col gap-1">
+                                            <div
+                                                className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : ''}`}
+                                                onClick={() => handleSort(col.key as keyof SoItem)}
+                                            >
+                                                {col.label}
+                                                {sortConfig && sortConfig.key === col.key && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                            </div>
+                                            {/* Optional: Filter Input if needed per column */}
+                                            {['status', 'transNo', 'transDate', 'customerName', 'description', 'statusName', 'existenceStatus', 'remarks'].includes(col.key) && (
+                                                <input
+                                                    type="text"
+                                                    placeholder="Filter..."
+                                                    className="w-full p-1 text-[10px] border rounded font-normal"
+                                                    value={colFilters[col.key] || ''}
+                                                    onChange={(e) => handleFilterChange(col.key, e.target.value)}
+                                                />
+                                            )}
                                         </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Cari..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['status'] || ''}
-                                            onChange={(e) => handleFilterChange('status', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* No Faktur */}
-                                <th className="p-3 border-b align-top w-[140px] bg-gray-100">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('transNo')}
-                                        >
-                                            No Faktur
-                                            {sortConfig && sortConfig.key === 'transNo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Cari No..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['transNo'] || ''}
-                                            onChange={(e) => handleFilterChange('transNo', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* Tanggal */}
-                                <th className="p-3 border-b align-top w-[100px] bg-gray-100">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('transDate')}
-                                        >
-                                            Tanggal
-                                            {sortConfig && sortConfig.key === 'transDate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Cari Tgl..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['transDate'] || ''}
-                                            onChange={(e) => handleFilterChange('transDate', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* Customer */}
-                                <th className="p-3 border-b align-top w-[180px] bg-gray-100">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('customerName')}
-                                        >
-                                            Customer
-                                            {sortConfig && sortConfig.key === 'customerName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Cari Nama..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['customerName'] || ''}
-                                            onChange={(e) => handleFilterChange('customerName', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* Keterangan */}
-                                <th className="p-3 border-b align-top w-[150px] bg-gray-100">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('description')}
-                                        >
-                                            Keterangan
-                                            {sortConfig && sortConfig.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Cari..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['description'] || ''}
-                                            onChange={(e) => handleFilterChange('description', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* Status Accurate */}
-                                <th className="p-3 border-b align-top w-[100px] bg-gray-100">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('statusName')}
-                                        >
-                                            Status Acc
-                                            {sortConfig && sortConfig.key === 'statusName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Cari..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['statusName'] || ''}
-                                            onChange={(e) => handleFilterChange('statusName', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* Total Nilai (Sort Only) */}
-                                <th className="p-3 border-b text-right font-bold w-[120px] bg-yellow-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('amount')}>
-                                    <div className="flex items-center justify-end gap-1">
-                                        Total Nilai
-                                        {sortConfig && sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                    </div>
-                                </th>
-
-                                {/* Status Lunas */}
-                                <th className="p-3 border-b text-center align-top w-[100px] bg-gray-100">
-                                    <div className="flex flex-col gap-1 items-center">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
-                                            onClick={() => handleSort('primeOwing')}
-                                        >
-                                            Status Lunas
-                                            {sortConfig && sortConfig.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                    </div>
-                                </th>
-
-                                {/* Sisa Tagihan (Sort Only) */}
-                                <th className="p-3 border-b text-right font-bold w-[120px] bg-red-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('primeOwing')}>
-                                    <div className="flex items-center justify-end gap-1">
-                                        Sisa Tagihan
-                                        {sortConfig && sortConfig.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                    </div>
-                                </th>
-
-                                {/* Status Keberadaan */}
-                                <th className="p-3 border-b font-bold w-[130px] border-l border-gray-200 bg-blue-50 align-top">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
-                                            onClick={() => handleSort('existenceStatus')}
-                                        >
-                                            Keberadaan
-                                            {sortConfig && sortConfig.key === 'existenceStatus' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="filters..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['existenceStatus'] || ''}
-                                            onChange={(e) => handleFilterChange('existenceStatus', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
-
-                                {/* Keterangan Tambahan */}
-                                <th className="p-3 border-b font-bold w-[180px] border-l border-gray-200 bg-blue-50 align-top">
-                                    <div className="flex flex-col gap-1">
-                                        <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
-                                            onClick={() => handleSort('remarks')}
-                                        >
-                                            Ket. Tambahan
-                                            {sortConfig && sortConfig.key === 'remarks' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="filters..."
-                                            className="w-full p-1 text-[10px] border rounded font-normal"
-                                            value={colFilters['remarks'] || ''}
-                                            onChange={(e) => handleFilterChange('remarks', e.target.value)}
-                                        />
-                                    </div>
-                                </th>
+                                    </th>
+                                ))}
                             </tr>
                         )}
                         itemContent={(index, item) => (
@@ -774,45 +631,16 @@ export default function ScannerInterface({
                     />
                 </div>
 
-                {/* Mobile View: Cards */}
-                <div className="md:hidden h-full">
-                    {processedItems.length > 0 ? (
-                        <Virtuoso
-                            style={{ height: 'calc(100vh - 200px)' }}
-                            data={processedItems}
-                            itemContent={(index, item) => (
-                                <ScannerCard key={item.id} item={item} onUpdate={handleUpdateItem} />
-                            )}
-                        />
-                    ) : (
-                        <div className="p-8 text-center text-gray-400 bg-white rounded-lg border">
-                            Data tidak ditemukan.
-                        </div>
-                    )}
-                </div>
-
-                {/* Mobile Floating Action Button for Finish */}
-                <div className="md:hidden fixed bottom-4 right-4 z-50">
-                    <button
-                        onClick={() => router.push(`/so/adjustment/${sessionId}`)}
-                        className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
-                        title="Selesai Scan"
-                    >
-                        <ArrowRight size={24} />
-                    </button>
+                <div className="md:hidden">
+                    <Virtuoso
+                        style={{ height: 'calc(100vh - 250px)' }}
+                        data={processedItems}
+                        itemContent={(index, item) => (
+                            <ScannerCard key={item.id} item={item} onUpdate={handleUpdateItem} />
+                        )}
+                    />
                 </div>
             </div>
-
-            {/* Camera Overlay */}
-            {showCamera && (
-                <CameraScanner
-                    onScan={(code) => {
-                        processScan(code);
-                        setShowCamera(false);
-                    }}
-                    onClose={() => setShowCamera(false)}
-                />
-            )}
         </div>
-    )
+    );
 }
