@@ -596,7 +596,18 @@ export default function ScannerInterface({
                                     </colgroup>
                                     {props.children}
                                 </table>
-                            )
+                            ),
+                            // Fix for double TR issue: Pass props to child (ScannerRow) instead of wrapping
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            TableRow: (props: any) => {
+                                const child = React.Children.only(props.children);
+                                return React.cloneElement(child, {
+                                    ...props,
+                                    // Merge className if needed, though usually empty from Virtuoso
+                                    className: `${child.props.className || ''} ${props.className || ''}`.trim(),
+                                    style: { ...child.props.style, ...props.style }
+                                });
+                            }
                         }}
                         fixedHeaderContent={() => (
                             <tr className="bg-gray-100 text-gray-600 border-b shadow-sm">
