@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 import { TableVirtuoso } from "react-virtuoso";
 
 interface Branch { id: string; name: string }
+
+const PIUTANG_COLUMNS = [
+    { key: 'customer', label: 'Customer', width: 300 },
+    { key: 'phone', label: 'Kontak', width: 150 },
+    { key: 'invoiceCount', label: 'Jml Invoice', width: 120, align: 'center' },
+    { key: 'totalOwing', label: 'Total Tagihan', width: 180, align: 'right' },
+    { key: 'action', label: 'Action', width: 100, align: 'right' }
+];
+
 interface CustomerData {
     id: string;
     name: string;
@@ -225,24 +234,37 @@ export default function PiutangPage() {
                             style={{ height: '500px' }}
                             data={customers}
                             components={{
-                                Table: (props) => <table {...props} className="w-full border-collapse" />
+                                Table: (props) => (
+                                    <table {...props} className="w-full border-collapse table-fixed" style={{ ...props.style, minWidth: 850 }}>
+                                        <colgroup>
+                                            {PIUTANG_COLUMNS.map((col, idx) => (
+                                                <col key={idx} style={{ width: col.width }} />
+                                            ))}
+                                        </colgroup>
+                                        {props.children}
+                                    </table>
+                                )
                             }}
                             fixedHeaderContent={() => (
                                 <tr className="bg-gray-100 text-gray-600 border-b">
-                                    <th className="p-4 bg-gray-100 text-left">Customer</th>
-                                    <th className="p-4 bg-gray-100 text-left">Kontak</th>
-                                    <th className="p-4 text-center bg-gray-100">Jml Invoice</th>
-                                    <th className="p-4 text-right bg-gray-100">Total Tagihan</th>
-                                    <th className="p-4 text-right bg-gray-100">Action</th>
+                                    {PIUTANG_COLUMNS.map((col, idx) => (
+                                        <th
+                                            key={idx}
+                                            style={{ width: col.width }}
+                                            className={`p-4 bg-gray-100 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}
+                                        >
+                                            {col.label}
+                                        </th>
+                                    ))}
                                 </tr>
                             )}
                             itemContent={(index, c) => (
                                 <>
-                                    <td className="p-4 font-bold text-gray-800">
+                                    <td className="p-4 font-bold text-gray-800" style={{ width: 300 }}>
                                         {c.name}
                                         <div className="text-xs text-gray-400 font-normal lg:hidden">{c.phone || '-'}</div>
                                     </td>
-                                    <td className="p-4 text-gray-600 hidden lg:table-cell">
+                                    <td className="p-4 text-gray-600 hidden lg:table-cell" style={{ width: 150 }}>
                                         {c.phone ? (
                                             <div className="flex items-center gap-2">
                                                 <Phone size={14} className="text-green-600" />
@@ -250,11 +272,11 @@ export default function PiutangPage() {
                                             </div>
                                         ) : '-'}
                                     </td>
-                                    <td className="p-4 text-center font-mono">{c.invoices?.length || 0}</td>
-                                    <td className="p-4 text-right font-mono font-bold text-red-600">
+                                    <td className="p-4 text-center font-mono" style={{ width: 120 }}>{c.invoices?.length || 0}</td>
+                                    <td className="p-4 text-right font-mono font-bold text-red-600" style={{ width: 180 }}>
                                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(c.totalOwing)}
                                     </td>
-                                    <td className="p-4 text-right">
+                                    <td className="p-4 text-right" style={{ width: 100 }}>
                                         <button
                                             onClick={() => handleShowDetail(c)}
                                             className="text-blue-600 hover:underline text-xs font-bold"

@@ -87,7 +87,7 @@ const _ScannerRow = React.forwardRef<HTMLTableRowElement, {
             ref={ref}
             {...props}
             id={`row-${item.transNo}`}
-            className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''} ${className || ''}`}
+            className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : 'bg-white'} ${className || ''}`}
             style={{ ...style }} // Merge style from Virtuoso
         >
             {/* Status (100) */}
