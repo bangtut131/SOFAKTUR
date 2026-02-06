@@ -573,6 +573,9 @@ export default function ScannerInterface({
                     <TableVirtuoso
                         style={{ height: 'calc(100vh - 250px)' }}
                         data={processedItems}
+                        components={{
+                            Table: (props) => <table {...props} className="w-full table-fixed border-collapse min-w-[1600px]" />
+                        }}
                         fixedHeaderContent={() => (
                             <tr className="bg-gray-100 text-gray-600 border-b shadow-sm">
                                 {/* Status SO */}
