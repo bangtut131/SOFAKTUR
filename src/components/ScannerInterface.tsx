@@ -38,7 +38,7 @@ const COLUMNS = [
     { key: 'remarks', label: 'Ket. Tambahan', width: 200 }
 ];
 
-const ScannerRow = React.memo(_ScannerRow);
+
 
 const _ScannerRow = React.forwardRef<HTMLTableRowElement, {
     item: SoItem;
@@ -173,6 +173,8 @@ const _ScannerRow = React.forwardRef<HTMLTableRowElement, {
         </tr>
     );
 });
+
+const ScannerRow = React.memo(_ScannerRow);
 
 const ScannerCard = React.memo(function ScannerCard({ item, onUpdate }: {
     item: SoItem;
