@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
-import { TableVirtuoso, Virtuoso } from "react-virtuoso";
+import { TableVirtuoso, Virtuoso, TableVirtuosoHandle } from "react-virtuoso";
 
 interface SoItem {
     id: string;
@@ -313,7 +313,24 @@ export default function ScannerInterface({
     const [scanInput, setScanInput] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
+    const virtuosoRef = useRef<TableVirtuosoHandle>(null);
     const [showCamera, setShowCamera] = useState(false);
+    const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+
+    // Auto-scroll effect
+    useEffect(() => {
+        if (!scrollTarget || !virtuosoRef.current) return;
+
+        const index = processedItems.findIndex(i => i.transNo === scrollTarget);
+        if (index !== -1) {
+            virtuosoRef.current.scrollToIndex({
+                index,
+                align: 'center',
+                behavior: 'smooth'
+            });
+            setScrollTarget(null);
+        }
+    }, [scrollTarget, processedItems]);
 
     // Sort & Filter State
     const [sortConfig, setSortConfig] = useState<{ key: keyof SoItem; direction: 'asc' | 'desc' } | null>(null);
@@ -470,16 +487,8 @@ export default function ScannerInterface({
                     } : inv
                 ));
 
-                // Auto Scroll to Item
-                setTimeout(() => {
-                    const element = document.getElementById(`row-${code}`) || document.getElementById(`card-${code}`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Optional: Add a flash effect via class manipulation if needed, but styling is enough for now
-                        element.classList.add('bg-blue-50');
-                        setTimeout(() => element.classList.remove('bg-blue-50'), 2000);
-                    }
-                }, 100);
+                // Auto Scroll handled by useEffect
+                setScrollTarget(code);
             } else {
                 alert(data.error);
             }
@@ -620,6 +629,7 @@ export default function ScannerInterface({
             <div className="flex-1 overflow-auto p-2 md:p-4">
                 <div className="hidden md:block bg-white rounded-lg shadow-sm border overflow-hidden h-full">
                     <TableVirtuoso
+                        ref={virtuosoRef}
                         style={{ height: 'calc(100vh - 250px)' }}
                         data={processedItems}
                         components={VirtuosoComponents}
