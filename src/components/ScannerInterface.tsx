@@ -588,7 +588,7 @@ export default function ScannerInterface({
                         data={processedItems}
                         components={{
                             Table: (props) => (
-                                <table {...props} className="w-full border-collapse table-fixed" style={{ minWidth: 1550 }}>
+                                <table {...props} className="w-full border-collapse table-fixed" style={{ ...props.style, minWidth: 1490 }}>
                                     <colgroup>
                                         {COLUMNS.map((col, idx) => (
                                             <col key={idx} style={{ width: col.width }} />
