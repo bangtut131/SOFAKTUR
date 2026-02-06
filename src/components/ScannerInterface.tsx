@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
-import { TableVirtuoso } from "react-virtuoso";
+import { TableVirtuoso, Virtuoso } from "react-virtuoso";
 
 interface SoItem {
     id: string;
