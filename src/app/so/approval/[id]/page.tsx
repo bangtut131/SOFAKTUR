@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, FileCheck, Download } from "lucide-react";
 
 interface SoItem {
@@ -15,8 +15,11 @@ interface SoItem {
     remarks?: string;
 }
 
-export default async function ApprovalPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+
+export default function ApprovalPage() {
+    const params = useParams();
+    const id = params.id as string;
+
     const router = useRouter();
     const [items, setItems] = useState<SoItem[]>([]);
     const [periodName, setPeriodName] = useState("");
@@ -25,6 +28,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
     const [filter, setFilter] = useState<'ALL' | 'UNVERIFIED' | 'HILANG' | 'SALES'>('ALL');
 
     useEffect(() => {
+        if (!id) return;
         const fetchData = async () => {
             try {
                 const res = await fetch(`/api/so/sessions/${id}`);
