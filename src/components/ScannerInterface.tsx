@@ -67,7 +67,8 @@ function _ScannerRow({ item, onUpdate }: {
 
     return (
         <tr id={`row-${item.transNo}`} className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''}`}>
-            <td className="p-3">
+            {/* Status */}
+            <td className="p-3 w-[100px]">
                 {item.status === 'MATCHED' ? (
                     <span className="inline-flex items-center gap-1 text-green-700 font-bold text-xs bg-green-200 px-2 py-1 rounded">
                         <CheckCircle size={12} /> OK
@@ -78,29 +79,36 @@ function _ScannerRow({ item, onUpdate }: {
                     </span>
                 )}
             </td>
-            <td className="p-3 font-mono font-bold text-blue-600">
+            {/* No Faktur */}
+            <td className="p-3 font-mono font-bold text-blue-600 w-[140px]">
                 {item.transNo}
             </td>
-            <td className="p-3 text-gray-600">
+            {/* Tanggal */}
+            <td className="p-3 text-gray-600 w-[100px]">
                 {item.transDate}
                 {item.dueDate && <div className="text-[10px] text-red-500">Due: {item.dueDate}</div>}
             </td>
-            <td className="p-3">
+            {/* Customer */}
+            <td className="p-3 w-[180px]">
                 <div className={`font-bold px-2 py-1 rounded inline-block text-sm ${getCustomerStyle()}`}>
                     {item.customerName}
                 </div>
             </td>
-            <td className="p-3 text-gray-500 max-w-[150px] truncate" title={item.description || ''}>
+            {/* Keterangan */}
+            <td className="p-3 text-gray-500 max-w-[150px] w-[150px] truncate" title={item.description || ''}>
                 {item.description || '-'}
             </td>
-            <td className="p-3">
+            {/* Status Acc */}
+            <td className="p-3 w-[100px]">
                 <div className="font-bold text-gray-700">{item.statusName || '-'}</div>
                 <div className="text-[10px] text-gray-400">{item.approvalStatus}</div>
             </td>
-            <td className="p-3 text-right font-mono font-bold text-gray-700 bg-yellow-50/50">
+            {/* Total Nilai */}
+            <td className="p-3 text-right font-mono font-bold text-gray-700 bg-yellow-50/50 w-[120px]">
                 {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(item.amount)}
             </td>
-            <td className="p-3 text-center">
+            {/* Status Lunas */}
+            <td className="p-3 text-center w-[100px]">
                 {item.primeOwing > 0 ? (
                     <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full border border-red-200">
                         BELUM
@@ -111,11 +119,12 @@ function _ScannerRow({ item, onUpdate }: {
                     </span>
                 )}
             </td>
-            <td className="p-3 text-right font-mono font-bold text-red-600 bg-red-50/50">
+            {/* Sisa Tagihan */}
+            <td className="p-3 text-right font-mono font-bold text-red-600 bg-red-50/50 w-[120px]">
                 {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(item.primeOwing)}
             </td>
-            {/* New Columns */}
-            <td className="p-3">
+            {/* Keberadaan */}
+            <td className="p-3 w-[130px]">
                 <select
                     className={`w-full text-xs p-1 border rounded font-bold ${existence === 'Ada' ? 'bg-green-100 text-green-800 border-green-300' : existence === 'Hilang' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-white border-gray-300 text-gray-900'}`}
                     value={existence}
@@ -127,7 +136,8 @@ function _ScannerRow({ item, onUpdate }: {
                     <option value="Dibawa Sales">Dibawa Sales</option>
                 </select>
             </td>
-            <td className="p-3">
+            {/* Ket. Tambahan */}
+            <td className="p-3 w-[180px]">
                 <input
                     type="text"
                     className="w-full text-xs p-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 text-gray-900"
