@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
-import { TableVirtuoso, Virtuoso, TableVirtuosoHandle } from "react-virtuoso";
+import { TableVirtuoso, Virtuoso } from "react-virtuoso";
+import type { TableVirtuosoHandle } from "react-virtuoso";
 
 interface SoItem {
     id: string;
@@ -37,6 +38,30 @@ const COLUMNS = [
     { key: 'existenceStatus', label: 'Keberadaan', width: 130 },
     { key: 'remarks', label: 'Ket. Tambahan', width: 200 }
 ];
+
+// Define Virtuoso components outside to ensure stability and prevent re-renders
+const VirtuosoComponents = {
+    Table: (props: any) => (
+        <table {...props} className="w-full border-collapse table-fixed" style={{ ...props.style, minWidth: 1490 }}>
+            <colgroup>
+                {COLUMNS.map((col, idx) => (
+                    <col key={idx} style={{ width: col.width }} />
+                ))}
+            </colgroup>
+            {props.children}
+        </table>
+    ),
+    // Fix for double TR issue: Pass props to child (ScannerRow) instead of wrapping
+    TableRow: (props: any) => {
+        const child = React.Children.only(props.children) as React.ReactElement;
+        return React.cloneElement(child, {
+            ...props,
+            // Merge className if needed, though usually empty from Virtuoso
+            className: `${child.props.className || ''} ${props.className || ''}`.trim(),
+            style: { ...child.props.style, ...props.style }
+        });
+    }
+};
 
 
 
@@ -275,29 +300,7 @@ const ScannerCard = React.memo(function ScannerCard({ item, onUpdate }: {
     )
 });
 
-// Define Virtuoso components outside to ensure stability and prevent re-renders
-const VirtuosoComponents = {
-    Table: (props: any) => (
-        <table {...props} className="w-full border-collapse table-fixed" style={{ ...props.style, minWidth: 1490 }}>
-            <colgroup>
-                {COLUMNS.map((col, idx) => (
-                    <col key={idx} style={{ width: col.width }} />
-                ))}
-            </colgroup>
-            {props.children}
-        </table>
-    ),
-    // Fix for double TR issue: Pass props to child (ScannerRow) instead of wrapping
-    TableRow: (props: any) => {
-        const child = React.Children.only(props.children) as React.ReactElement;
-        return React.cloneElement(child, {
-            ...props,
-            // Merge className if needed, though usually empty from Virtuoso
-            className: `${child.props.className || ''} ${props.className || ''}`.trim(),
-            style: { ...child.props.style, ...props.style }
-        });
-    }
-};
+
 
 export default function ScannerInterface({
     sessionId,
@@ -317,20 +320,7 @@ export default function ScannerInterface({
     const [showCamera, setShowCamera] = useState(false);
     const [scrollTarget, setScrollTarget] = useState<string | null>(null);
 
-    // Auto-scroll effect
-    useEffect(() => {
-        if (!scrollTarget || !virtuosoRef.current) return;
 
-        const index = processedItems.findIndex(i => i.transNo === scrollTarget);
-        if (index !== -1) {
-            virtuosoRef.current.scrollToIndex({
-                index,
-                align: 'center',
-                behavior: 'smooth'
-            });
-            setScrollTarget(null);
-        }
-    }, [scrollTarget, processedItems]);
 
     // Sort & Filter State
     const [sortConfig, setSortConfig] = useState<{ key: keyof SoItem; direction: 'asc' | 'desc' } | null>(null);
@@ -399,6 +389,21 @@ export default function ScannerInterface({
 
         return data;
     }, [items, sortConfig, colFilters, searchQuery]);
+
+    // Auto-scroll effect (must be after processedItems definition)
+    useEffect(() => {
+        if (!scrollTarget || !virtuosoRef.current) return;
+
+        const index = processedItems.findIndex(i => i.transNo === scrollTarget);
+        if (index !== -1) {
+            virtuosoRef.current.scrollToIndex({
+                index,
+                align: 'center',
+                behavior: 'smooth'
+            });
+            setScrollTarget(null);
+        }
+    }, [scrollTarget, processedItems]);
 
     // Use Ref to keep track of items for callbacks without triggering re-creation
     const itemsRef = useRef(items);
