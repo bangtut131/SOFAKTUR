@@ -275,6 +275,30 @@ const ScannerCard = React.memo(function ScannerCard({ item, onUpdate }: {
     )
 });
 
+// Define Virtuoso components outside to ensure stability and prevent re-renders
+const VirtuosoComponents = {
+    Table: (props: any) => (
+        <table {...props} className="w-full border-collapse table-fixed" style={{ ...props.style, minWidth: 1490 }}>
+            <colgroup>
+                {COLUMNS.map((col, idx) => (
+                    <col key={idx} style={{ width: col.width }} />
+                ))}
+            </colgroup>
+            {props.children}
+        </table>
+    ),
+    // Fix for double TR issue: Pass props to child (ScannerRow) instead of wrapping
+    TableRow: (props: any) => {
+        const child = React.Children.only(props.children) as React.ReactElement;
+        return React.cloneElement(child, {
+            ...props,
+            // Merge className if needed, though usually empty from Virtuoso
+            className: `${child.props.className || ''} ${props.className || ''}`.trim(),
+            style: { ...child.props.style, ...props.style }
+        });
+    }
+};
+
 export default function ScannerInterface({
     sessionId,
     periodName,
@@ -598,29 +622,7 @@ export default function ScannerInterface({
                     <TableVirtuoso
                         style={{ height: 'calc(100vh - 250px)' }}
                         data={processedItems}
-                        components={{
-                            Table: (props) => (
-                                <table {...props} className="w-full border-collapse table-fixed" style={{ ...props.style, minWidth: 1490 }}>
-                                    <colgroup>
-                                        {COLUMNS.map((col, idx) => (
-                                            <col key={idx} style={{ width: col.width }} />
-                                        ))}
-                                    </colgroup>
-                                    {props.children}
-                                </table>
-                            ),
-                            // Fix for double TR issue: Pass props to child (ScannerRow) instead of wrapping
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            TableRow: (props: any) => {
-                                const child = React.Children.only(props.children);
-                                return React.cloneElement(child, {
-                                    ...props,
-                                    // Merge className if needed, though usually empty from Virtuoso
-                                    className: `${child.props.className || ''} ${props.className || ''}`.trim(),
-                                    style: { ...child.props.style, ...props.style }
-                                });
-                            }
-                        }}
+                        components={VirtuosoComponents}
                         fixedHeaderContent={() => (
                             <tr className="bg-gray-100 text-gray-600 border-b shadow-sm">
                                 {COLUMNS.map((col, idx) => (
