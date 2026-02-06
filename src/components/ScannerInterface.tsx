@@ -524,7 +524,7 @@ export default function ScannerInterface({
             {/* Header / Top Bar */}
             <div className="bg-white p-4 border-b flex flex-col md:flex-row gap-4 items-center shrink-0 shadow-sm z-10">
                 <div className="flex items-center w-full md:w-auto gap-4">
-                    <button onClick={() => router.push('/dashboard')} className="p-2 border rounded-full hover:bg-gray-100 transition">
+                    <button onClick={() => router.push('/dashboard')} className="p-2 border rounded-full text-gray-700 bg-gray-50 hover:bg-gray-200 transition shadow-sm">
                         <ArrowLeft />
                     </button>
                     <div>
@@ -583,13 +583,13 @@ export default function ScannerInterface({
             <div className="bg-white p-4 border-b shadow-sm z-10">
                 <form onSubmit={handleManualScan} className="flex gap-2">
                     <div className="relative flex-1">
-                        <Scan className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
+                        <Scan className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                         <input
                             ref={inputRef}
                             type="text"
                             value={scanInput}
                             onChange={(e) => setScanInput(e.target.value)}
-                            className="w-full p-3 pl-10 border-2 border-blue-200 rounded-lg text-lg font-mono focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition outline-none"
+                            className="w-full p-3 pl-10 border-2 border-blue-200 rounded-lg text-lg font-mono focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition outline-none placeholder-gray-500"
                             placeholder="SCAN BARCODE..."
                         />
                     </div>
