@@ -40,10 +40,13 @@ const COLUMNS = [
 
 const ScannerRow = React.memo(_ScannerRow);
 
-function _ScannerRow({ item, onUpdate }: {
+const _ScannerRow = React.forwardRef<HTMLTableRowElement, {
     item: SoItem;
     onUpdate: (id: string, field: string, value: string) => void;
-}) {
+    style?: React.CSSProperties; // Add style prop from Virtuoso
+    className?: string; // Add className prop
+}>(({ item, onUpdate, style, className, ...props }, ref) => {
+
     // Local state for immediate UI feedback before API confirms
     const [existence, setExistence] = useState(item.existenceStatus || "");
     const [remarks, setRemarks] = useState(item.remarks || "");
@@ -80,7 +83,13 @@ function _ScannerRow({ item, onUpdate }: {
     };
 
     return (
-        <tr id={`row-${item.transNo}`} className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''}`}>
+        <tr
+            ref={ref}
+            {...props}
+            id={`row-${item.transNo}`}
+            className={`hover:bg-gray-50 ${item.status === 'MATCHED' ? 'bg-green-50' : ''} ${className || ''}`}
+            style={{ ...style }} // Merge style from Virtuoso
+        >
             {/* Status (100) */}
             <td className="p-3" style={{ width: 100 }}>
                 {item.status === 'MATCHED' ? (
@@ -163,7 +172,7 @@ function _ScannerRow({ item, onUpdate }: {
             </td>
         </tr>
     );
-}
+});
 
 const ScannerCard = React.memo(function ScannerCard({ item, onUpdate }: {
     item: SoItem;
@@ -481,6 +490,7 @@ export default function ScannerInterface({
                             setShowCamera(false);
                             processScan(code);
                         }}
+                        onClose={() => setShowCamera(false)}
                     />
                 </div>
             )}

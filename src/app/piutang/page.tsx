@@ -224,6 +224,9 @@ export default function PiutangPage() {
                         <TableVirtuoso
                             style={{ height: '500px' }}
                             data={customers}
+                            components={{
+                                Table: (props) => <table {...props} className="w-full border-collapse" />
+                            }}
                             fixedHeaderContent={() => (
                                 <tr className="bg-gray-100 text-gray-600 border-b">
                                     <th className="p-4 bg-gray-100 text-left">Customer</th>
