@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, RefreshCw, Send, Settings, History, X, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { TableVirtuoso } from "react-virtuoso";
 
 interface Branch { id: string; name: string }
 interface CustomerData {
@@ -217,57 +218,51 @@ export default function PiutangPage() {
                 )}
 
                 {/* Table */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden overflow-x-auto">
-                    <div className="p-4 border-b bg-gray-50 font-bold text-gray-700">Daftar Piutang Customer</div>
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-100 text-gray-600 border-b">
-                            <tr>
-                                <th className="p-4">Customer</th>
-                                <th className="p-4">Kontak</th>
-                                <th className="p-4 text-center">Jml Invoice</th>
-                                <th className="p-4 text-right">Total Tagihan</th>
-                                <th className="p-4 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {!stats ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-400">
-                                    Klik "Sync Data Accurate" untuk memperbarui data
-                                </td></tr>
-                            ) : customers.length === 0 ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-400">Tidak ada data piutang.</td></tr>
-                            ) : (
-                                customers.map((c) => (
-                                    <tr key={c.id} className="hover:bg-gray-50">
-                                        <td className="p-4 font-bold text-gray-800">
-                                            {c.name}
-                                            <div className="text-xs text-gray-400 font-normal lg:hidden">{c.phone || '-'}</div>
-                                        </td>
-                                        <td className="p-4 text-gray-600 hidden lg:table-cell">
-                                            {c.phone ? (
-                                                <div className="flex items-center gap-2">
-                                                    <Phone size={14} className="text-green-600" />
-                                                    {c.phone}
-                                                </div>
-                                            ) : '-'}
-                                        </td>
-                                        <td className="p-4 text-center font-mono">{c.invoices?.length || 0}</td>
-                                        <td className="p-4 text-right font-mono font-bold text-red-600">
-                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(c.totalOwing)}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <button
-                                                onClick={() => handleShowDetail(c)}
-                                                className="text-blue-600 hover:underline text-xs font-bold"
-                                            >
-                                                Detail
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden h-full flex flex-col">
+                    <div className="p-4 border-b bg-gray-50 font-bold text-gray-700 shrink-0">Daftar Piutang Customer</div>
+                    <div className="flex-1">
+                        <TableVirtuoso
+                            style={{ height: '500px' }}
+                            data={customers}
+                            fixedHeaderContent={() => (
+                                <tr className="bg-gray-100 text-gray-600 border-b">
+                                    <th className="p-4 bg-gray-100 text-left">Customer</th>
+                                    <th className="p-4 bg-gray-100 text-left">Kontak</th>
+                                    <th className="p-4 text-center bg-gray-100">Jml Invoice</th>
+                                    <th className="p-4 text-right bg-gray-100">Total Tagihan</th>
+                                    <th className="p-4 text-right bg-gray-100">Action</th>
+                                </tr>
                             )}
-                        </tbody>
-                    </table>
+                            itemContent={(index, c) => (
+                                <>
+                                    <td className="p-4 font-bold text-gray-800">
+                                        {c.name}
+                                        <div className="text-xs text-gray-400 font-normal lg:hidden">{c.phone || '-'}</div>
+                                    </td>
+                                    <td className="p-4 text-gray-600 hidden lg:table-cell">
+                                        {c.phone ? (
+                                            <div className="flex items-center gap-2">
+                                                <Phone size={14} className="text-green-600" />
+                                                {c.phone}
+                                            </div>
+                                        ) : '-'}
+                                    </td>
+                                    <td className="p-4 text-center font-mono">{c.invoices?.length || 0}</td>
+                                    <td className="p-4 text-right font-mono font-bold text-red-600">
+                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(c.totalOwing)}
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <button
+                                            onClick={() => handleShowDetail(c)}
+                                            className="text-blue-600 hover:underline text-xs font-bold"
+                                        >
+                                            Detail
+                                        </button>
+                                    </td>
+                                </>
+                            )}
+                        />
+                    </div>
                 </div>
             </main>
 

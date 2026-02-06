@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
+import { TableVirtuoso, Virtuoso } from "react-virtuoso";
 
 interface SoItem {
     id: string;
@@ -558,13 +559,14 @@ export default function ScannerInterface({
 
             {/* List */}
             <div className="flex-1 overflow-auto p-2 md:p-4">
-                {/* Desktop View: Table */}
-                <div className="hidden md:block bg-white rounded-lg shadow-sm border overflow-hidden">
-                    <table className="w-full text-left text-sm relative">
-                        <thead className="bg-gray-100 text-gray-600 border-b sticky top-0 z-10 shadow-sm">
-                            <tr>
+                <div className="hidden md:block bg-white rounded-lg shadow-sm border overflow-hidden h-full">
+                    <TableVirtuoso
+                        style={{ height: 'calc(100vh - 250px)' }}
+                        data={processedItems}
+                        fixedHeaderContent={() => (
+                            <tr className="bg-gray-100 text-gray-600 border-b shadow-sm">
                                 {/* Status SO */}
-                                <th className="p-3 border-b align-top w-24">
+                                <th className="p-3 border-b align-top w-24 bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -584,7 +586,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* No Faktur */}
-                                <th className="p-3 border-b align-top">
+                                <th className="p-3 border-b align-top bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -604,7 +606,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Tanggal */}
-                                <th className="p-3 border-b align-top">
+                                <th className="p-3 border-b align-top bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -624,7 +626,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Customer */}
-                                <th className="p-3 border-b align-top">
+                                <th className="p-3 border-b align-top bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -644,7 +646,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Keterangan */}
-                                <th className="p-3 border-b align-top">
+                                <th className="p-3 border-b align-top bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -664,7 +666,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Status Accurate */}
-                                <th className="p-3 border-b align-top w-28">
+                                <th className="p-3 border-b align-top w-28 bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -692,7 +694,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Status Lunas */}
-                                <th className="p-3 border-b text-center align-top w-28">
+                                <th className="p-3 border-b text-center align-top w-28 bg-gray-100">
                                     <div className="flex flex-col gap-1 items-center">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -752,28 +754,24 @@ export default function ScannerInterface({
                                     </div>
                                 </th>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {processedItems.map(item => (
-                                <ScannerRow key={item.id} item={item} onUpdate={handleUpdateItem} />
-                            ))}
-                            {processedItems.length === 0 && (
-                                <tr>
-                                    <td colSpan={11} className="p-8 text-center text-gray-400">
-                                        Data tidak ditemukan.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                        )}
+                        itemContent={(index, item) => (
+                            <ScannerRow key={item.id} item={item} onUpdate={handleUpdateItem} />
+                        )}
+                    />
                 </div>
 
                 {/* Mobile View: Cards */}
-                <div className="md:hidden space-y-3">
-                    {processedItems.map(item => (
-                        <ScannerCard key={item.id} item={item} onUpdate={handleUpdateItem} />
-                    ))}
-                    {processedItems.length === 0 && (
+                <div className="md:hidden h-full">
+                    {processedItems.length > 0 ? (
+                        <Virtuoso
+                            style={{ height: 'calc(100vh - 200px)' }}
+                            data={processedItems}
+                            itemContent={(index, item) => (
+                                <ScannerCard key={item.id} item={item} onUpdate={handleUpdateItem} />
+                            )}
+                        />
+                    ) : (
                         <div className="p-8 text-center text-gray-400 bg-white rounded-lg border">
                             Data tidak ditemukan.
                         </div>
