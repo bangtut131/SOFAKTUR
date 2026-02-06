@@ -585,7 +585,7 @@ export default function ScannerInterface({
                         <Download size={18} /> Excel
                     </button>
                     <button
-                        onClick={() => router.push(`/so/sessions/${sessionId}/approve`)}
+                        onClick={() => router.push(`/so/approval/${sessionId}`)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition"
                     >
                         Selesai Scan <ArrowRight size={18} />
