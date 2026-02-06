@@ -5,7 +5,6 @@ import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowU
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
 import { TableVirtuoso, Virtuoso } from "react-virtuoso";
-import type { TableVirtuosoHandle } from "react-virtuoso";
 
 interface SoItem {
     id: string;
@@ -316,7 +315,7 @@ export default function ScannerInterface({
     const [scanInput, setScanInput] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
-    const virtuosoRef = useRef<TableVirtuosoHandle>(null);
+    const virtuosoRef = useRef<any>(null);
     const [showCamera, setShowCamera] = useState(false);
     const [scrollTarget, setScrollTarget] = useState<string | null>(null);
 
