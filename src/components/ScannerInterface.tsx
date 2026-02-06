@@ -566,7 +566,7 @@ export default function ScannerInterface({
                         fixedHeaderContent={() => (
                             <tr className="bg-gray-100 text-gray-600 border-b shadow-sm">
                                 {/* Status SO */}
-                                <th className="p-3 border-b align-top w-24 bg-gray-100">
+                                <th className="p-3 border-b align-top w-[100px] bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -586,7 +586,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* No Faktur */}
-                                <th className="p-3 border-b align-top bg-gray-100">
+                                <th className="p-3 border-b align-top w-[140px] bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -606,7 +606,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Tanggal */}
-                                <th className="p-3 border-b align-top bg-gray-100">
+                                <th className="p-3 border-b align-top w-[100px] bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -626,7 +626,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Customer */}
-                                <th className="p-3 border-b align-top bg-gray-100">
+                                <th className="p-3 border-b align-top w-[180px] bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -646,7 +646,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Keterangan */}
-                                <th className="p-3 border-b align-top bg-gray-100">
+                                <th className="p-3 border-b align-top w-[150px] bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -666,7 +666,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Status Accurate */}
-                                <th className="p-3 border-b align-top w-28 bg-gray-100">
+                                <th className="p-3 border-b align-top w-[100px] bg-gray-100">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -686,7 +686,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Total Nilai (Sort Only) */}
-                                <th className="p-3 border-b text-right font-bold bg-yellow-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('amount')}>
+                                <th className="p-3 border-b text-right font-bold w-[120px] bg-yellow-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('amount')}>
                                     <div className="flex items-center justify-end gap-1">
                                         Total Nilai
                                         {sortConfig && sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
@@ -694,7 +694,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Status Lunas */}
-                                <th className="p-3 border-b text-center align-top w-28 bg-gray-100">
+                                <th className="p-3 border-b text-center align-top w-[100px] bg-gray-100">
                                     <div className="flex flex-col gap-1 items-center">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600 font-bold"
@@ -707,7 +707,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Sisa Tagihan (Sort Only) */}
-                                <th className="p-3 border-b text-right font-bold bg-red-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('primeOwing')}>
+                                <th className="p-3 border-b text-right font-bold w-[120px] bg-red-50 align-top cursor-pointer hover:text-blue-600" onClick={() => handleSort('primeOwing')}>
                                     <div className="flex items-center justify-end gap-1">
                                         Sisa Tagihan
                                         {sortConfig && sortConfig.key === 'primeOwing' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
@@ -715,7 +715,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Status Keberadaan */}
-                                <th className="p-3 border-b font-bold w-32 border-l border-gray-200 bg-blue-50 align-top">
+                                <th className="p-3 border-b font-bold w-[130px] border-l border-gray-200 bg-blue-50 align-top">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
@@ -735,7 +735,7 @@ export default function ScannerInterface({
                                 </th>
 
                                 {/* Keterangan Tambahan */}
-                                <th className="p-3 border-b font-bold w-48 border-l border-gray-200 bg-blue-50 align-top">
+                                <th className="p-3 border-b font-bold w-[180px] border-l border-gray-200 bg-blue-50 align-top">
                                     <div className="flex flex-col gap-1">
                                         <div
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
