@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Lock, FileWarning, CheckCircle, AlertTriangle, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { generatePDF } from "@/utils/pdfGenerator";
 
@@ -19,8 +19,9 @@ interface SoItem {
     remarks?: string;
 }
 
-export default async function AdjustmentPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default function AdjustmentPage() {
+    const params = useParams();
+    const id = params?.id as string;
     const router = useRouter();
     const [items, setItems] = useState<SoItem[]>([]);
     const [periodName, setPeriodName] = useState("");
