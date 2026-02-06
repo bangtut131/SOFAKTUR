@@ -68,6 +68,9 @@ model SoItem {
   @@index([sessionId])
   @@index([transNo])
   @@index([sessionId, transNo]) // Composite index for scan lookup
+  @@index([sessionId, customerName]) // For sorting by customer
+  @@index([sessionId, transDate]) // For sorting by date
+  @@index([sessionId, status]) // For filtering by status
 }
 
 model Customer {

@@ -7,9 +7,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     try {
         const session = await prisma.soSession.findUnique({
             where: { id: id },
-            include: {
+            select: {
+                id: true,
+                periodName: true,
+                status: true,
+                createdAt: true,
                 items: {
-                    orderBy: { customerName: 'asc' }
+                    orderBy: { customerName: 'asc' },
+                    select: {
+                        id: true,
+                        transNo: true,
+                        transDate: true,
+                        customerName: true,
+                        amount: true,
+                        primeOwing: true,
+                        description: true,
+                        statusName: true,
+                        approvalStatus: true,
+                        status: true,
+                        existenceStatus: true,
+                        remarks: true,
+                        scannedAt: true,
+                        // Exclude heavy fields if any future additions
+                    }
                 }
             }
         });
