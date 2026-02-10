@@ -437,11 +437,9 @@ export const AccurateServerService = {
     },
 
     /**
-     * Fetch ALL invoices using parallel batch requests.
-     * 1. Fetch page 1 to get totalCount
-     * 2. Calculate remaining pages
-     * 3. Fetch remaining pages in parallel batches
-     * 4. All JS-level safety filters preserved
+     * Fetch ALL invoices using dynamic parallel batch requests.
+     * Uses rawCount-based pagination (same logic as original) but with parallel batching.
+     * Does NOT rely on totalCount since the API branch filter may be inaccurate.
      */
     async fetchAllInvoices(filters: {
         owingStatus?: string | null,
@@ -453,77 +451,76 @@ export const AccurateServerService = {
 
         const PAGE_SIZE = 200;
         const BATCH_SIZE = 5; // Concurrent requests per batch
+        const MAX_PAGES = 500; // Safety limit
 
-        console.log(`[FETCH ALL] Starting parallel fetch with pageSize=${PAGE_SIZE}, batchSize=${BATCH_SIZE}`);
+        console.log(`[FETCH ALL] Starting dynamic parallel fetch with pageSize=${PAGE_SIZE}, batchSize=${BATCH_SIZE}`);
         const startTime = Date.now();
 
-        // Step 1: Fetch page 1 to get totalCount
-        const firstResult = await this.fetchInvoices({
-            ...filters,
-            page: 1,
-            limit: PAGE_SIZE
-        });
+        const allInvoices: AccurateInvoice[] = [];
+        let currentPage = 1;
+        let hasMore = true;
+        let lastTotalCount = 0;
 
-        if (firstResult.error) {
-            return { invoices: [], error: firstResult.error };
-        }
+        while (hasMore && currentPage <= MAX_PAGES) {
+            // Build batch of pages to fetch in parallel
+            const pagesToFetch = [];
+            for (let i = 0; i < BATCH_SIZE && (currentPage + i) <= MAX_PAGES; i++) {
+                pagesToFetch.push(currentPage + i);
+            }
 
-        const allInvoices = [...firstResult.invoices];
-        const totalCount = firstResult.totalCount || 0;
-        const rawCountPage1 = firstResult.rawCount || 0;
-
-        console.log(`[FETCH ALL] Page 1: got ${firstResult.invoices.length} filtered invoices (${rawCountPage1} raw). API totalCount=${totalCount}`);
-
-        // If page 1 returned less than PAGE_SIZE raw items, there's no more data
-        if (rawCountPage1 < PAGE_SIZE || totalCount <= PAGE_SIZE) {
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            console.log(`[FETCH ALL] Complete in ${elapsed}s. Total: ${allInvoices.length} invoices (single page)`);
-            return { invoices: allInvoices, totalCount };
-        }
-
-        // Step 2: Calculate remaining pages
-        const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-        const remainingPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2); // [2, 3, 4, ...]
-
-        console.log(`[FETCH ALL] Total pages to fetch: ${totalPages} (${remainingPages.length} remaining)`);
-
-        // Step 3: Fetch remaining pages in parallel batches
-        for (let batchStart = 0; batchStart < remainingPages.length; batchStart += BATCH_SIZE) {
-            const batch = remainingPages.slice(batchStart, batchStart + BATCH_SIZE);
-            const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
-            const totalBatches = Math.ceil(remainingPages.length / BATCH_SIZE);
-
-            console.log(`[FETCH ALL] Batch ${batchNum}/${totalBatches}: fetching pages [${batch.join(', ')}]...`);
+            const batchNum = Math.ceil(currentPage / BATCH_SIZE);
+            console.log(`[FETCH ALL] Batch ${batchNum}: fetching pages [${pagesToFetch.join(', ')}]...`);
 
             const batchResults = await Promise.all(
-                batch.map(page => this.fetchInvoices({
+                pagesToFetch.map(page => this.fetchInvoices({
                     ...filters,
                     page,
                     limit: PAGE_SIZE
                 }))
             );
 
-            let batchCount = 0;
-            for (const result of batchResults) {
+            let batchFilteredCount = 0;
+            let shouldStop = false;
+
+            for (let i = 0; i < batchResults.length; i++) {
+                const result = batchResults[i];
+                const pageNum = pagesToFetch[i];
+
                 if (result.error) {
-                    console.warn(`[FETCH ALL] Page error (non-fatal): ${result.error}`);
-                    continue;
+                    console.warn(`[FETCH ALL] Page ${pageNum} error (non-fatal): ${result.error}`);
+                    shouldStop = true;
+                    break;
                 }
+
                 allInvoices.push(...result.invoices);
-                batchCount += result.invoices.length;
+                batchFilteredCount += result.invoices.length;
+                lastTotalCount = result.totalCount || lastTotalCount;
+
+                const rawCount = result.rawCount || 0;
+                console.log(`[FETCH ALL]   Page ${pageNum}: ${rawCount} raw → ${result.invoices.length} filtered`);
+
+                // If this page returned less than PAGE_SIZE raw items, no more data
+                if (rawCount < PAGE_SIZE) {
+                    shouldStop = true;
+                    break;
+                }
             }
 
-            console.log(`[FETCH ALL] Batch ${batchNum} done: +${batchCount} invoices (total: ${allInvoices.length})`);
+            console.log(`[FETCH ALL] Batch ${batchNum} done: +${batchFilteredCount} invoices (total: ${allInvoices.length})`);
 
-            // Small delay between batches to avoid overwhelming the API
-            if (batchStart + BATCH_SIZE < remainingPages.length) {
+            if (shouldStop) {
+                hasMore = false;
+            } else {
+                currentPage += BATCH_SIZE;
+
+                // Small delay between batches to avoid overwhelming the API
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[FETCH ALL] Complete in ${elapsed}s. Total: ${allInvoices.length} invoices from ${totalPages} pages`);
+        console.log(`[FETCH ALL] Complete in ${elapsed}s. Total: ${allInvoices.length} invoices from ${currentPage + BATCH_SIZE - 1} pages`);
 
-        return { invoices: allInvoices, totalCount };
+        return { invoices: allInvoices, totalCount: lastTotalCount };
     }
 };
