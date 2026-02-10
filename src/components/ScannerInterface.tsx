@@ -396,14 +396,15 @@ export default function ScannerInterface({
 
         const index = processedItems.findIndex(i => i.transNo === scrollTarget);
         if (index !== -1) {
-            // Try desktop TableVirtuoso first, then mobile Virtuoso
-            const ref = virtuosoRef.current || mobileVirtuosoRef.current;
-            if (ref) {
-                ref.scrollToIndex({
-                    index,
-                    align: 'center',
-                    behavior: 'smooth'
-                });
+            // Both components are always mounted (hidden via CSS),
+            // so scroll both — whichever is visible will respond
+            const scrollOpts = { index, align: 'center' as const, behavior: 'smooth' as const };
+
+            if (virtuosoRef.current) {
+                virtuosoRef.current.scrollToIndex(scrollOpts);
+            }
+            if (mobileVirtuosoRef.current) {
+                mobileVirtuosoRef.current.scrollToIndex(scrollOpts);
             }
             setScrollTarget(null);
         }
