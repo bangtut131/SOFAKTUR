@@ -5,60 +5,34 @@ import { AccurateServerService } from '@/services/accurateServer';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { sessionId, filters, page, pagesPerBatch = 1 } = body;
+        const { sessionId, filters, page } = body;
 
-        const PAGE_SIZE = 200; // Increased from 100 for faster fetching
+        const LIMIT = '100';
 
         if (!sessionId || !page) {
             return NextResponse.json({ error: 'Session ID and Page are required' }, { status: 400 });
         }
 
-        // Build list of pages to fetch
-        const pagesToFetch = Array.from({ length: pagesPerBatch }, (_, i) => page + i);
+        // 1. Fetch from Accurate
+        const result = await AccurateServerService.fetchInvoices({
+            ...filters,
+            page: page.toString(),
+            limit: LIMIT
+        });
 
-        console.log(`[BATCH] Fetching pages [${pagesToFetch.join(', ')}] in parallel (pageSize=${PAGE_SIZE})...`);
-
-        // Fetch all pages in parallel
-        const results = await Promise.all(
-            pagesToFetch.map(p => AccurateServerService.fetchInvoices({
-                ...filters,
-                page: p,
-                limit: PAGE_SIZE
-            }))
-        );
-
-        // Combine results and check for errors / end of data
-        let allInvoices: any[] = [];
-        let hasMore = true;
-
-        for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            const pageNum = pagesToFetch[i];
-
-            if (result.error) {
-                console.warn(`[BATCH] Page ${pageNum} error: ${result.error}`);
-                hasMore = false;
-                break;
-            }
-
-            allInvoices.push(...result.invoices);
-            const rawCount = result.rawCount || 0;
-
-            console.log(`[BATCH]   Page ${pageNum}: ${rawCount} raw → ${result.invoices.length} filtered`);
-
-            // If this page returned less than PAGE_SIZE raw items, no more data
-            if (rawCount < PAGE_SIZE) {
-                hasMore = false;
-                break;
-            }
+        if (result.error) {
+            return NextResponse.json({ error: result.error }, { status: 500 });
         }
 
-        const totalValue = allInvoices.reduce((sum: number, item: any) => sum + item.primeOwing, 0);
+        const invoices = result.invoices;
+        const totalValue = invoices.reduce((sum, item) => sum + item.primeOwing, 0);
 
-        // Save to Database
+        // 2. Save to Database (Transaction to update Session Stats too)
         await prisma.$transaction(async (tx) => {
-            if (allInvoices.length > 0) {
-                const itemsData = allInvoices.map(inv => ({
+            // Bulk Insert Items
+            if (invoices.length > 0) {
+                // Prepare data
+                const itemsData = invoices.map(inv => ({
                     sessionId,
                     transNo: inv.transNo,
                     transDate: inv.transDate,
@@ -73,25 +47,29 @@ export async function POST(request: Request) {
                     status: 'UNVERIFIED'
                 }));
 
+                // Use createMany for performance (SQLite supports this in recent Prisma versions, else loop)
+                // Note: SQLite connector in Prisma DOES support createMany.
                 await tx.soItem.createMany({
                     data: itemsData
                 });
 
+                // Update Session Stats
                 await tx.soSession.update({
                     where: { id: sessionId },
                     data: {
-                        totalItems: { increment: allInvoices.length },
+                        totalItems: { increment: invoices.length },
                         totalValue: { increment: totalValue }
                     }
                 });
             }
         });
 
-        console.log(`[BATCH] Saved ${allInvoices.length} invoices. hasMore=${hasMore}`);
+        // Determine if there are more
+        const hasMore = (result.rawCount || 0) >= parseInt(LIMIT);
 
         return NextResponse.json({
             success: true,
-            count: allInvoices.length,
+            count: invoices.length,
             hasMore
         });
 

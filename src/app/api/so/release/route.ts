@@ -11,14 +11,37 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Period Name is required' }, { status: 400 });
         }
 
-        // 1. Fetch ALL data from Accurate (Parallel Batch)
-        const result = await AccurateServerService.fetchAllInvoices(filters);
+        // 1. Fetch ALL data from Accurate (Looping Pages)
+        let allInvoices: any[] = [];
+        let page = 1;
+        let hasMore = true;
+        const LIMIT = '100';
 
-        if (result.error) {
-            return NextResponse.json({ error: `Accurate API Error: ${result.error}` }, { status: 500 });
+        // Safety limit to prevent infinite loops
+        const MAX_PAGES = 50;
+
+        while (hasMore && page <= MAX_PAGES) {
+            const result = await AccurateServerService.fetchInvoices({
+                ...filters,
+                page: page.toString(),
+                limit: LIMIT
+            });
+
+            if (result.error) {
+                return NextResponse.json({ error: `Accurate API Error on page ${page}: ${result.error}` }, { status: 500 });
+            }
+
+            const pageData = result.invoices;
+            allInvoices = [...allInvoices, ...pageData];
+
+            // Check RAW count from API to decide if there is more data
+            // If API returned 100 items (LIMIT), there might be more, even if we filtered some out in JS.
+            if ((result.rawCount || 0) < parseInt(LIMIT)) {
+                hasMore = false;
+            } else {
+                page++;
+            }
         }
-
-        const allInvoices = result.invoices;
 
         if (allInvoices.length === 0) {
             return NextResponse.json({ error: 'No data found from Accurate with provided filters' }, { status: 404 });
