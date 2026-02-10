@@ -63,20 +63,31 @@ export default function ReleaseSOPage() {
             if (!initRes.ok) throw new Error(initData.error);
 
             const sessionId = initData.sessionId;
+            let page = 1;
+            let hasMore = true;
+            let totalFetched = 0;
+            const MAX_PAGES = 500;
+            const PAGES_PER_BATCH = 5; // Server fetches 5 pages in parallel per call
 
-            // 2. Fetch all data in parallel (server-side) and save to DB
-            setProgress({ current: 0, status: 'Menarik data dari Accurate (parallel batch)...' });
+            // 2. Loop Batches (server fetches multiple pages per call)
+            while (hasMore && page <= MAX_PAGES) {
+                setProgress({ current: totalFetched, status: `Menarik data halaman ${page}-${page + PAGES_PER_BATCH - 1}...` });
 
-            const allRes = await fetch('/api/so/release/all', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, filters })
-            });
+                const batchRes = await fetch('/api/so/release/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, filters, page, pagesPerBatch: PAGES_PER_BATCH })
+                });
 
-            const allData = await allRes.json();
-            if (!allRes.ok) throw new Error(allData.error);
+                const batchData = await batchRes.json();
+                if (!batchRes.ok) throw new Error(batchData.error);
 
-            const totalFetched = allData.count;
+                totalFetched += batchData.count;
+                hasMore = batchData.hasMore;
+                page += PAGES_PER_BATCH;
+
+                await new Promise(r => setTimeout(r, 100));
+            }
 
             setProgress({ current: totalFetched, status: 'Selesai!' });
             alert(`Berhasil Release SO! \nTotal Faktur: ${totalFetched}`);
