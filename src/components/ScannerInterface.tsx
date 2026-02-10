@@ -316,6 +316,7 @@ export default function ScannerInterface({
     const [searchQuery, setSearchQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
     const virtuosoRef = useRef<any>(null);
+    const mobileVirtuosoRef = useRef<any>(null);
     const [showCamera, setShowCamera] = useState(false);
     const [scrollTarget, setScrollTarget] = useState<string | null>(null);
 
@@ -391,15 +392,19 @@ export default function ScannerInterface({
 
     // Auto-scroll effect (must be after processedItems definition)
     useEffect(() => {
-        if (!scrollTarget || !virtuosoRef.current) return;
+        if (!scrollTarget) return;
 
         const index = processedItems.findIndex(i => i.transNo === scrollTarget);
         if (index !== -1) {
-            virtuosoRef.current.scrollToIndex({
-                index,
-                align: 'center',
-                behavior: 'smooth'
-            });
+            // Try desktop TableVirtuoso first, then mobile Virtuoso
+            const ref = virtuosoRef.current || mobileVirtuosoRef.current;
+            if (ref) {
+                ref.scrollToIndex({
+                    index,
+                    align: 'center',
+                    behavior: 'smooth'
+                });
+            }
             setScrollTarget(null);
         }
     }, [scrollTarget, processedItems]);
@@ -672,6 +677,7 @@ export default function ScannerInterface({
 
                 <div className="md:hidden">
                     <Virtuoso
+                        ref={mobileVirtuosoRef}
                         style={{ height: 'calc(100vh - 250px)' }}
                         data={processedItems}
                         itemContent={(index, item) => (
