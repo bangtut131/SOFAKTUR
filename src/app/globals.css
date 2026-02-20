@@ -8,11 +8,12 @@
   --background-end-rgb: 255, 255, 255;
 }
 
+/* Override dark mode - app always uses light theme */
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --foreground-rgb: 0, 0, 0;
+    --background-start-rgb: 214, 219, 220;
+    --background-end-rgb: 255, 255, 255;
   }
 }
 
@@ -20,4 +21,13 @@ body {
   color: rgb(var(--foreground-rgb));
   background: white;
   /* Clean, light background */
+}
+
+/* Force input text to always be dark/readable */
+input, textarea, select {
+  color: #111827 !important; /* gray-900 */
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 */
 }
