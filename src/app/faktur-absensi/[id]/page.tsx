@@ -351,7 +351,7 @@ export default function AbsensiDetailPage() {
                                     value={transNo}
                                     onChange={e => handleTransNoChange(e.target.value)}
                                     onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                                 />
                                 {transNo && (
                                     <button
@@ -381,21 +381,21 @@ export default function AbsensiDetailPage() {
                                 placeholder="Nama Customer"
                                 value={customerName}
                                 onChange={e => setCustomerName(e.target.value)}
-                                className="md:col-span-3 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                                className="md:col-span-3 w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                             />
                             <input
                                 type="number"
                                 placeholder="Nominal (Rp)"
                                 value={amount}
                                 onChange={e => setAmount(e.target.value)}
-                                className="md:col-span-2 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                                className="md:col-span-2 w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                             />
                             <input
                                 type="text"
                                 placeholder="Keterangan"
                                 value={remarks}
                                 onChange={e => setRemarks(e.target.value)}
-                                className="md:col-span-2 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                                className="md:col-span-2 w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                             />
                             <button
                                 onClick={handleAddItem}
