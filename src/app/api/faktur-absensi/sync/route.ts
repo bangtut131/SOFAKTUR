@@ -41,11 +41,13 @@ export async function POST() {
         // 2. Update SoItems based on the map
         for (const [transNo, info] of transNoStatusMap) {
             if (info.isOut) {
-                // Mark as "Dibawa Sales" in SO
+                // Mark as "Dibawa Sales" in SO + set scan status to MATCHED
                 const result = await prisma.soItem.updateMany({
                     where: { transNo },
                     data: {
                         existenceStatus: 'Dibawa Sales',
+                        status: 'MATCHED',
+                        scannedAt: new Date(),
                         remarks: `Dibawa oleh: ${info.salesName} (${new Date(info.date).toLocaleDateString('id-ID')})`,
                     }
                 });
