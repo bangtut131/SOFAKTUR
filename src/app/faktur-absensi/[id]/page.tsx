@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
     ArrowLeft, Plus, Trash2, RotateCcw, CheckCircle, Clock,
-    Package, User, Calendar, Search, X, ClipboardList, Lock
+    Package, User, Calendar, Search, X, ClipboardList, Lock, Camera
 } from "lucide-react";
+import CameraScanner from "@/components/CameraScanner";
 
 interface AbsensiItem {
     id: string;
@@ -54,6 +55,9 @@ export default function AbsensiDetailPage() {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    // Scanner
+    const [showScanner, setShowScanner] = useState(false);
 
     // Filter
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'OUT' | 'RETURNED'>('ALL');
@@ -111,6 +115,27 @@ export default function AbsensiDetailPage() {
         setAmount(item.amount.toString());
         setShowSuggestions(false);
         setSuggestions([]);
+    };
+
+    const handleScanResult = async (scannedText: string) => {
+        setShowScanner(false);
+        const cleaned = scannedText.trim();
+        setTransNo(cleaned);
+
+        // Try to auto-fill from SoItem data
+        try {
+            const res = await fetch(`/api/faktur-absensi/search?q=${encodeURIComponent(cleaned)}`);
+            const data = await res.json();
+            const match = (data.items || []).find(
+                (i: SuggestionItem) => i.transNo.toLowerCase() === cleaned.toLowerCase()
+            );
+            if (match) {
+                setCustomerName(match.customerName);
+                setAmount(match.amount.toString());
+            }
+        } catch (e) {
+            // Ignore search errors, user can still fill manually
+        }
     };
 
     const handleAddItem = async () => {
@@ -304,10 +329,19 @@ export default function AbsensiDetailPage() {
                 {/* Add Faktur Form */}
                 {isOpen && (
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                        <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                            <Plus size={16} className="text-orange-500" />
-                            Tambah Faktur
-                        </h2>
+                        <div className="flex justify-between items-center mb-3">
+                            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <Plus size={16} className="text-orange-500" />
+                                Tambah Faktur
+                            </h2>
+                            <button
+                                onClick={() => setShowScanner(true)}
+                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm active:scale-95"
+                            >
+                                <Camera size={16} />
+                                Scan Barcode
+                            </button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                             {/* TransNo with Autocomplete */}
                             <div className="md:col-span-3 relative" ref={suggestionsRef}>
@@ -372,6 +406,14 @@ export default function AbsensiDetailPage() {
                                 {adding ? 'Menambah...' : 'Tambah'}
                             </button>
                         </div>
+
+                        {/* Camera Scanner Modal */}
+                        {showScanner && (
+                            <CameraScanner
+                                onScan={handleScanResult}
+                                onClose={() => setShowScanner(false)}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -388,8 +430,8 @@ export default function AbsensiDetailPage() {
                                     key={status}
                                     onClick={() => setFilterStatus(status)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterStatus === status
-                                            ? 'bg-orange-500 text-white shadow-sm'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        ? 'bg-orange-500 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                 >
                                     {status === 'ALL' ? `Semua (${items.length})` :
@@ -438,8 +480,8 @@ export default function AbsensiDetailPage() {
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${item.returnStatus === 'OUT'
-                                                        ? 'bg-amber-100 text-amber-700'
-                                                        : 'bg-green-100 text-green-700'
+                                                    ? 'bg-amber-100 text-amber-700'
+                                                    : 'bg-green-100 text-green-700'
                                                     }`}>
                                                     {item.returnStatus === 'OUT' ? (
                                                         <><Clock size={12} /> Dibawa</>
@@ -453,8 +495,8 @@ export default function AbsensiDetailPage() {
                                                     <button
                                                         onClick={() => handleReturn(item.id)}
                                                         className={`p-1.5 rounded-lg transition text-xs font-bold ${item.returnStatus === 'OUT'
-                                                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                                                : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                            : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                                                             }`}
                                                         title={item.returnStatus === 'OUT' ? 'Terima Kembali' : 'Batalkan Pengembalian'}
                                                     >
