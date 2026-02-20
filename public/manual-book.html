@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Book - GAS PDE (SO Faktur Jual)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --orange: #f97316;
+            --orange-light: #fff7ed;
+            --green: #16a34a;
+            --green-light: #f0fdf4;
+            --red: #dc2626;
+            --red-light: #fef2f2;
+            --purple: #7c3aed;
+            --purple-light: #f5f3ff;
+            --gray-900: #111827;
+            --gray-700: #374151;
+            --gray-500: #6b7280;
+            --gray-300: #d1d5db;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            color: var(--gray-900);
+            line-height: 1.7;
+            background: white;
+            font-size: 11pt;
+        }
+
+        @media print {
+            body { font-size: 10pt; }
+            .page-break { page-break-before: always; }
+            .no-print { display: none !important; }
+            .cover-page { height: 100vh; }
+            h2 { page-break-before: always; }
+            h2:first-of-type { page-break-before: avoid; }
+            table { font-size: 9pt; }
+        }
+
+        @media screen {
+            body { max-width: 210mm; margin: 0 auto; padding: 20mm; background: #f0f0f0; }
+            .page-content { background: white; padding: 20mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        }
+
+        /* Cover Page */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 80vh;
+            border: 3px solid var(--primary);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .cover-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--orange));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 30px;
+        }
+
+        .cover-title {
+            font-size: 32pt;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .cover-subtitle {
+            font-size: 16pt;
+            font-weight: 500;
+            color: var(--gray-500);
+            margin-bottom: 30px;
+        }
+
+        .cover-app {
+            font-size: 14pt;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 8px 24px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+        }
+
+        .cover-info {
+            font-size: 10pt;
+            color: var(--gray-500);
+            line-height: 2;
+        }
+
+        .cover-info strong { color: var(--gray-700); }
+
+        /* Typography */
+        h1 { font-size: 22pt; font-weight: 800; color: var(--gray-900); margin-bottom: 16px; letter-spacing: -0.3px; }
+        h2 { font-size: 18pt; font-weight: 700; color: var(--primary); margin-top: 40px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--primary-light); }
+        h3 { font-size: 13pt; font-weight: 700; color: var(--gray-900); margin-top: 24px; margin-bottom: 10px; }
+        h4 { font-size: 11pt; font-weight: 600; color: var(--gray-700); margin-top: 16px; margin-bottom: 8px; }
+
+        p { margin-bottom: 12px; color: var(--gray-700); }
+
+        ul, ol { margin-bottom: 12px; padding-left: 24px; }
+        li { margin-bottom: 6px; color: var(--gray-700); }
+
+        /* Info Boxes */
+        .info-box {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-size: 10pt;
+        }
+
+        .info-box.blue { background: var(--primary-light); border-left: 4px solid var(--primary); }
+        .info-box.orange { background: var(--orange-light); border-left: 4px solid var(--orange); }
+        .info-box.green { background: var(--green-light); border-left: 4px solid var(--green); }
+        .info-box.red { background: var(--red-light); border-left: 4px solid var(--red); }
+        .info-box.purple { background: var(--purple-light); border-left: 4px solid var(--purple); }
+
+        .info-box strong { display: block; margin-bottom: 4px; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 10pt;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border: 1px solid var(--gray-300);
+        }
+
+        th {
+            background: var(--gray-100);
+            font-weight: 700;
+            color: var(--gray-900);
+            font-size: 9pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        tr:nth-child(even) { background: var(--gray-50); }
+
+        /* Steps */
+        .step {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            min-width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content { flex: 1; padding-top: 4px; }
+        .step-content strong { display: block; color: var(--gray-900); margin-bottom: 2px; }
+        .step-content p { margin-bottom: 4px; font-size: 10pt; }
+
+        /* Code/mono */
+        code {
+            background: var(--gray-100);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 9pt;
+            color: var(--red);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: 600;
+        }
+        .badge.green { background: var(--green-light); color: var(--green); }
+        .badge.orange { background: var(--orange-light); color: var(--orange); }
+        .badge.red { background: var(--red-light); color: var(--red); }
+        .badge.blue { background: var(--primary-light); color: var(--primary); }
+        .badge.purple { background: var(--purple-light); color: var(--purple); }
+
+        /* TOC */
+        .toc { margin: 20px 0; }
+        .toc a { color: var(--primary); text-decoration: none; display: block; padding: 6px 0; border-bottom: 1px dashed var(--gray-300); }
+        .toc a:hover { color: var(--orange); }
+        .toc .toc-sub { padding-left: 24px; font-size: 10pt; }
+
+        /* Flow diagram */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .flow-box {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 10pt;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .flow-arrow {
+            font-size: 20px;
+            color: var(--gray-500);
+            font-weight: 700;
+        }
+
+        /* Print button */
+        .print-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            z-index: 100;
+        }
+        .print-btn:hover { background: #1d4ed8; }
+
+        .section-divider {
+            border: none;
+            height: 1px;
+            background: var(--gray-300);
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+
+<div class="page-content">
+
+<!-- ==================== COVER PAGE ==================== -->
+<div class="cover-page">
+    <div class="cover-logo">G</div>
+    <div class="cover-title">Manual Book</div>
+    <div class="cover-subtitle">Panduan Lengkap Penggunaan Aplikasi</div>
+    <div class="cover-app">GAS PDE — SO Faktur Jual</div>
+    <div class="cover-info">
+        <strong>PT. Gama Agro Sejati</strong>
+        Project Division — Divisi IT<br>
+        Versi Dokumen: 2.0 | Februari 2026<br>
+        Terakhir diperbarui: 20 Februari 2026
+    </div>
+</div>
+
+<!-- ==================== TABLE OF CONTENTS ==================== -->
+<h2 id="daftar-isi" style="page-break-before:avoid;">Daftar Isi</h2>
+
+<div class="toc">
+    <a href="#pendahuluan">1. Pendahuluan</a>
+    <a href="#login" class="toc-sub">1.1 Login dan Autentikasi</a>
+    <a href="#peran" class="toc-sub">1.2 Peran Pengguna (Roles)</a>
+
+    <a href="#dashboard">2. Dashboard</a>
+    <a href="#dashboard-overview" class="toc-sub">2.1 Halaman Utama Dashboard</a>
+    <a href="#dashboard-nav" class="toc-sub">2.2 Navigasi Menu</a>
+
+    <a href="#so-release">3. SO Release — Buat Periode Baru</a>
+    <a href="#so-release-filter" class="toc-sub">3.1 Filter Data Accurate</a>
+    <a href="#so-release-proses" class="toc-sub">3.2 Proses Release</a>
+
+    <a href="#so-process">4. SO Process — Scan Faktur</a>
+    <a href="#so-scan-barcode" class="toc-sub">4.1 Scan Barcode</a>
+    <a href="#so-scan-manual" class="toc-sub">4.2 Input Manual</a>
+    <a href="#so-scan-camera" class="toc-sub">4.3 Scan via Kamera</a>
+    <a href="#so-filter-sort" class="toc-sub">4.4 Filter dan Sortir Data</a>
+    <a href="#so-existence" class="toc-sub">4.5 Status Keberadaan Faktur</a>
+    <a href="#so-export" class="toc-sub">4.6 Export Data</a>
+
+    <a href="#so-adjustment">5. SO Adjustment & Finalisasi</a>
+    <a href="#so-adj-review" class="toc-sub">5.1 Review Data</a>
+    <a href="#so-adj-submit" class="toc-sub">5.2 Submit for Approval</a>
+    <a href="#so-adj-export" class="toc-sub">5.3 Export XLSX & PDF</a>
+
+    <a href="#piutang">6. Piutang (Receivables)</a>
+    <a href="#piutang-sync" class="toc-sub">6.1 Sync Data dari Accurate</a>
+    <a href="#piutang-broadcast" class="toc-sub">6.2 Broadcast WhatsApp</a>
+    <a href="#piutang-detail" class="toc-sub">6.3 Detail Customer</a>
+
+    <a href="#piutang-settings">7. Pengaturan Broadcast & Jadwal</a>
+    <a href="#waha-config" class="toc-sub">7.1 Konfigurasi WAHA</a>
+    <a href="#broadcast-testing" class="toc-sub">7.2 Broadcast Testing</a>
+    <a href="#jadwal" class="toc-sub">7.3 Jadwal Otomatis (SYNC & BROADCAST)</a>
+
+    <a href="#absensi">8. Absensi Faktur Harian</a>
+    <a href="#absensi-sesi" class="toc-sub">8.1 Membuat Sesi Absensi</a>
+    <a href="#absensi-scan" class="toc-sub">8.2 Menambah Faktur (Manual & Scan)</a>
+    <a href="#absensi-return" class="toc-sub">8.3 Terima Kembali Faktur</a>
+    <a href="#absensi-sync" class="toc-sub">8.4 Sync ke SO</a>
+
+    <a href="#settings">9. Settings (Pengaturan Sistem)</a>
+    <a href="#settings-users" class="toc-sub">9.1 Manajemen User</a>
+    <a href="#settings-roles" class="toc-sub">9.2 Konfigurasi Role & Kolom</a>
+    <a href="#settings-logs" class="toc-sub">9.3 System Logs</a>
+
+    <a href="#alur-kerja">10. Alur Kerja Lengkap</a>
+    <a href="#faq">11. FAQ — Pertanyaan Umum</a>
+</div>
+
+<!-- ==================== 1. PENDAHULUAN ==================== -->
+<h2 id="pendahuluan">1. Pendahuluan</h2>
+
+<p>Aplikasi <strong>GAS PDE (SO Faktur Jual)</strong> adalah sistem manajemen Stock Opname (SO) faktur penjualan yang terintegrasi dengan <strong>Accurate Online</strong>. Aplikasi ini memfasilitasi proses verifikasi keberadaan fisik faktur, pelacakan piutang, dan broadcast tagihan otomatis via WhatsApp.</p>
+
+<h3 id="login">1.1 Login dan Autentikasi</h3>
+
+<p>Untuk mengakses aplikasi, buka URL aplikasi di browser. Halaman login akan tampil meminta:</p>
+
+<table>
+    <tr><th>Field</th><th>Keterangan</th></tr>
+    <tr><td><strong>Username</strong></td><td>Nama pengguna yang telah didaftarkan oleh Admin</td></tr>
+    <tr><td><strong>Password</strong></td><td>Kata sandi pengguna</td></tr>
+</table>
+
+<div class="info-box blue">
+    <strong>ℹ️ Catatan</strong>
+    Sesi login disimpan dalam cookie browser. Jika Anda menutup semua tab browser, Anda akan diminta login kembali.
+</div>
+
+<h3 id="peran">1.2 Peran Pengguna (Roles)</h3>
+
+<table>
+    <tr><th>Role</th><th>Hak Akses</th></tr>
+    <tr>
+        <td><span class="badge blue">ADMIN</span></td>
+        <td>Akses penuh: Dashboard, SO Release, SO Process, Adjustment, Piutang, Settings, Absensi Faktur, System Logs</td>
+    </tr>
+    <tr>
+        <td><span class="badge green">FINANCE</span></td>
+        <td>Dashboard, SO Adjustment (Approval), Piutang (termasuk Settings Broadcast), Absensi Faktur</td>
+    </tr>
+    <tr>
+        <td><span class="badge orange">STAFF</span></td>
+        <td>Dashboard, SO Process (scan faktur), Piutang (tanpa Settings), Absensi Faktur</td>
+    </tr>
+</table>
+
+<!-- ==================== 2. DASHBOARD ==================== -->
+<h2 id="dashboard">2. Dashboard</h2>
+
+<h3 id="dashboard-overview">2.1 Halaman Utama Dashboard</h3>
+
+<p>Dashboard menampilkan <strong>daftar semua periode SO</strong> yang telah dibuat. Setiap kartu periode menampilkan:</p>
+
+<ul>
+    <li><strong>Nama Periode</strong> — judul sesi SO (contoh: "SO Minggu 4 Januari 2026")</li>
+    <li><strong>Status</strong> — OPEN, SUBMITTED, atau FINALIZED</li>
+    <li><strong>Jumlah Faktur</strong> — total faktur dalam periode tersebut</li>
+    <li><strong>Tanggal Dibuat</strong></li>
+</ul>
+
+<p>Klik pada kartu periode untuk membuka halaman <strong>SO Process</strong> (jika OPEN) atau <strong>Adjustment</strong> (jika SUBMITTED/FINALIZED).</p>
+
+<h3 id="dashboard-nav">2.2 Navigasi Menu</h3>
+
+<p>Header dashboard berisi navigasi utama:</p>
+
+<table>
+    <tr><th>Tombol</th><th>Fungsi</th><th>Akses</th></tr>
+    <tr><td>Piutang</td><td>Ke halaman pengelolaan piutang</td><td>Semua role</td></tr>
+    <tr><td>Absensi Faktur</td><td>Ke halaman absensi faktur harian</td><td>Semua role</td></tr>
+    <tr><td>SO Release</td><td>Buat periode SO baru</td><td>ADMIN</td></tr>
+    <tr><td>Settings ⚙️</td><td>Pengaturan sistem</td><td>ADMIN</td></tr>
+</table>
+
+<!-- ==================== 3. SO RELEASE ==================== -->
+<h2 id="so-release">3. SO Release — Buat Periode Baru</h2>
+
+<p>Menu <strong>SO Release</strong> digunakan untuk menarik data faktur dari Accurate Online dan membuat periode Stock Opname baru. Data yang ditarik akan disalin ke database lokal sehingga perubahan di Accurate setelahnya tidak mempengaruhi sesi SO yang sedang berjalan.</p>
+
+<h3 id="so-release-filter">3.1 Filter Data Accurate</h3>
+
+<table>
+    <tr><th>Filter</th><th>Opsi</th><th>Keterangan</th></tr>
+    <tr><td>Nama Periode/Sesi</td><td>Teks bebas</td><td><strong>Wajib diisi.</strong> Contoh: "SO Minggu 4 Jan 2026"</td></tr>
+    <tr><td>Status Piutang</td><td>Belum Lunas / Lunas / Semua</td><td>Default: Belum Lunas (Outstanding)</td></tr>
+    <tr><td>Status Accurate</td><td>Teks bebas (opsional)</td><td>Contoh: "Dihapus" untuk filter status tertentu</td></tr>
+    <tr><td>Filter Cabang</td><td>Dropdown cabang (opsional)</td><td>Kosongkan untuk semua cabang</td></tr>
+    <tr><td>Dari Tanggal</td><td>Date picker (opsional)</td><td>Batas awal tanggal faktur</td></tr>
+    <tr><td>Sampai Tanggal</td><td>Date picker (opsional)</td><td>Batas akhir tanggal faktur</td></tr>
+</table>
+
+<h3 id="so-release-proses">3.2 Proses Release</h3>
+
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Isi Nama Periode</strong>
+        <p>Berikan nama deskriptif untuk periode SO yang akan dibuat.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Atur Filter (opsional)</strong>
+        <p>Sesuaikan filter data sesuai kebutuhan: status piutang, cabang, dan rentang tanggal.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+        <strong>Klik "Release Data SO"</strong>
+        <p>Sistem akan menarik data dari Accurate secara batch. Progress akan ditampilkan secara real-time (jumlah faktur yang ditarik per halaman).</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">4</div>
+    <div class="step-content">
+        <strong>Selesai</strong>
+        <p>Setelah selesai, Anda diarahkan kembali ke Dashboard. Periode baru muncul di daftar dan siap diproses.</p>
+    </div>
+</div>
+
+<div class="info-box orange">
+    <strong>⚠️ Penting</strong>
+    Jangan tutup halaman saat proses release berlangsung. Data yang sudah di-release merupakan snapshot — perubahan di Accurate setelahnya tidak akan tercermin.
+</div>
+
+<!-- ==================== 4. SO PROCESS ==================== -->
+<h2 id="so-process">4. SO Process — Scan Faktur</h2>
+
+<p>Halaman <strong>SO Process</strong> adalah area utama kerja Stock Opname. Di sini, petugas memverifikasi keberadaan fisik faktur dengan cara scan barcode atau input manual nomor faktur.</p>
+
+<h3 id="so-scan-barcode">4.1 Scan Barcode</h3>
+
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Gunakan Barcode Scanner</strong>
+        <p>Arahkan barcode scanner (hardware) ke barcode pada faktur fisik. Scanner akan otomatis mengirim nomor faktur ke field input.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Verifikasi Otomatis</strong>
+        <p>Sistem akan mencocokkan nomor faktur yang discan dengan data SO. Jika cocok, status berubah dari <span class="badge orange">UNVERIFIED</span> ke <span class="badge green">MATCHED</span>.</p>
+    </div>
+</div>
+
+<table>
+    <tr><th>Status</th><th>Ikon</th><th>Keterangan</th></tr>
+    <tr><td><span class="badge green">MATCHED</span></td><td>✅</td><td>Faktur ditemukan dan cocok — sudah di-scan</td></tr>
+    <tr><td><span class="badge orange">UNVERIFIED</span></td><td>⚠️</td><td>Faktur belum di-scan / belum diverifikasi</td></tr>
+</table>
+
+<h3 id="so-scan-manual">4.2 Input Manual</h3>
+
+<p>Selain scan, Anda bisa mengetik nomor faktur secara manual di field <strong>"Ketik No. Faktur"</strong> lalu tekan <strong>Enter</strong> atau klik tombol <strong>"Scan"</strong>.</p>
+
+<h3 id="so-scan-camera">4.3 Scan via Kamera</h3>
+
+<p>Klik tombol <strong>📷 Kamera</strong> untuk membuka scanner menggunakan kamera perangkat. Arahkan kamera ke barcode faktur. Fitur ini berguna untuk perangkat mobile (HP/tablet) yang tidak memiliki barcode scanner hardware.</p>
+
+<h3 id="so-filter-sort">4.4 Filter dan Sortir Data</h3>
+
+<p>Di bagian atas tabel, tersedia tombol <strong>Filter</strong> yang membuka panel filter dengan opsi:</p>
+
+<table>
+    <tr><th>Filter</th><th>Opsi</th></tr>
+    <tr><td>Status Scan</td><td>Semua / MATCHED / UNVERIFIED</td></tr>
+    <tr><td>Status Keberadaan</td><td>Semua / ADA / HILANG / Dibawa Sales</td></tr>
+</table>
+
+<p>Klik header kolom pada tabel untuk <strong>sortir data</strong> berdasarkan kolom tersebut (ascending/descending).</p>
+
+<h3 id="so-existence">4.5 Status Keberadaan Faktur</h3>
+
+<p>Setiap faktur memiliki kolom <strong>Keberadaan</strong> yang dapat diubah melalui dropdown:</p>
+
+<table>
+    <tr><th>Status</th><th>Keterangan</th></tr>
+    <tr><td><span class="badge green">ADA</span></td><td>Faktur fisik ditemukan dan ada di tempat</td></tr>
+    <tr><td><span class="badge red">HILANG</span></td><td>Faktur fisik tidak ditemukan / hilang</td></tr>
+    <tr><td><span class="badge purple">Dibawa Sales</span></td><td>Faktur sedang dibawa oleh sales (diset otomatis via Absensi Faktur)</td></tr>
+    <tr><td>— (Kosong)</td><td>Belum diverifikasi keberadaannya</td></tr>
+</table>
+
+<p>Kolom <strong>Keterangan Tambahan (Remarks)</strong> dapat diisi untuk catatan tambahan, misalnya: "dipinjam oleh Pak Andi" atau "fotokopi".</p>
+
+<h3 id="so-export">4.6 Export Data</h3>
+
+<p>Klik tombol <strong>"Export"</strong> untuk mengunduh data SO dalam format file yang dapat dibuka di spreadsheet.</p>
+
+<!-- ==================== 5. ADJUSTMENT ==================== -->
+<h2 id="so-adjustment">5. SO Adjustment & Finalisasi</h2>
+
+<p>Halaman Adjustment menampilkan <strong>ringkasan hasil SO</strong> dan memungkinkan review sebelum submit untuk approval.</p>
+
+<h3 id="so-adj-review">5.1 Review Data</h3>
+
+<p>Bagian atas menampilkan <strong>4 kartu ringkasan</strong>:</p>
+
+<table>
+    <tr><th>Kartu</th><th>Keterangan</th></tr>
+    <tr><td>Total Faktur</td><td>Jumlah seluruh faktur dalam periode</td></tr>
+    <tr><td>Verified (Match)</td><td>Faktur yang sudah di-scan dan cocok</td></tr>
+    <tr><td>Selisih / Belum OK</td><td>Faktur yang belum ter-scan (perlu perhatian)</td></tr>
+    <tr><td>Hilang & Sales</td><td>Rincian faktur hilang dan faktur yang dibawa sales</td></tr>
+</table>
+
+<p>Filter tersedia untuk menampilkan data berdasarkan kategori:</p>
+<ul>
+    <li><strong>Semua Data</strong> — tampilkan semua faktur</li>
+    <li><strong>Selisih Only</strong> — hanya faktur yang belum terverifikasi</li>
+    <li><strong>Hilang</strong> — hanya faktur berstatus HILANG</li>
+    <li><strong>Dibawa Sales</strong> — hanya faktur yang dibawa sales</li>
+</ul>
+
+<h3 id="so-adj-submit">5.2 Submit for Approval</h3>
+
+<p>Setelah review selesai, klik tombol <strong>"Submit for Approval"</strong> untuk mengunci data dan meminta persetujuan Finance. Setelah submit:</p>
+<ul>
+    <li>Status sesi berubah menjadi <span class="badge orange">SUBMITTED</span></li>
+    <li>Data menjadi <strong>read-only</strong> — tidak bisa diedit lagi</li>
+    <li>Menunggu persetujuan dari Finance/Admin</li>
+</ul>
+
+<h3 id="so-adj-export">5.3 Export XLSX & PDF</h3>
+
+<p>Setelah sesi berstatus <span class="badge green">FINALIZED</span>, tombol export tersedia:</p>
+
+<table>
+    <tr><th>Format</th><th>Keterangan</th></tr>
+    <tr><td><strong>XLSX</strong></td><td>Download sebagai file Excel untuk analisis lebih lanjut</td></tr>
+    <tr><td><strong>PDF</strong></td><td>Download sebagai dokumen PDF untuk arsip/cetak</td></tr>
+</table>
+
+<!-- ==================== 6. PIUTANG ==================== -->
+<h2 id="piutang">6. Piutang (Receivables)</h2>
+
+<p>Menu <strong>Piutang</strong> menampilkan data tagihan customer yang ditarik dari Accurate Online. Dilengkapi dengan fitur broadcast tagihan via WhatsApp.</p>
+
+<h3 id="piutang-sync">6.1 Sync Data dari Accurate</h3>
+
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Pilih Cabang (opsional)</strong>
+        <p>Gunakan dropdown cabang untuk memfilter data per cabang. Biarkan kosong untuk semua cabang.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Klik "Force Sync" (🔄)</strong>
+        <p>Sistem menarik data piutang terbaru dari Accurate. Proses ini membutuhkan beberapa saat tergantung jumlah data.</p>
+    </div>
+</div>
+
+<h3 id="piutang-broadcast">6.2 Broadcast WhatsApp</h3>
+
+<p>Klik tombol <strong>"Broadcast"</strong> untuk mengirim pesan tagihan ke semua customer yang memiliki piutang. Pesan dikirim via <strong>WAHA</strong> (WhatsApp HTTP API).</p>
+
+<div class="info-box blue">
+    <strong>ℹ️ Prasyarat Broadcast</strong>
+    Konfigurasi WAHA harus sudah diatur di halaman <strong>Piutang → Settings</strong>. Pastikan koneksi WAHA aktif dan session WhatsApp terhubung.
+</div>
+
+<h3 id="piutang-detail">6.3 Detail Customer</h3>
+
+<p>Tabel piutang menampilkan:</p>
+
+<table>
+    <tr><th>Kolom</th><th>Keterangan</th></tr>
+    <tr><td>Customer</td><td>Nama customer</td></tr>
+    <tr><td>Kontak</td><td>Nomor telepon customer (untuk WhatsApp)</td></tr>
+    <tr><td>Jml Invoice</td><td>Jumlah faktur yang belum lunas</td></tr>
+    <tr><td>Total Tagihan</td><td>Total nominal piutang customer</td></tr>
+    <tr><td>Action</td><td>Tombol untuk melihat detail faktur</td></tr>
+</table>
+
+<!-- ==================== 7. PIUTANG SETTINGS ==================== -->
+<h2 id="piutang-settings">7. Pengaturan Broadcast & Jadwal</h2>
+
+<p>Diakses melalui <strong>Piutang → Settings</strong> (hanya untuk role ADMIN dan FINANCE).</p>
+
+<h3 id="waha-config">7.1 Konfigurasi WAHA</h3>
+
+<p>WAHA (WhatsApp HTTP API) adalah gateway untuk mengirim pesan WhatsApp. Konfigurasi yang diperlukan:</p>
+
+<table>
+    <tr><th>Field</th><th>Keterangan</th><th>Contoh</th></tr>
+    <tr><td>WAHA API URL</td><td>URL server WAHA Anda</td><td><code>https://waha.example.com</code></td></tr>
+    <tr><td>Session ID</td><td>ID sesi WhatsApp di WAHA</td><td><code>default</code></td></tr>
+    <tr><td>API Key</td><td>Kunci API (opsional)</td><td><code>secret_key</code></td></tr>
+</table>
+
+<p>Gunakan tombol <strong>"Test Connection"</strong> untuk menguji koneksi. Masukkan nomor HP tujuan, lalu klik Test. Jika berhasil, pesan test akan terkirim ke WhatsApp tujuan.</p>
+
+<h3 id="broadcast-testing">7.2 Broadcast Testing</h3>
+
+<p>Fitur testing memungkinkan Anda menguji template broadcast sebelum digunakan secara massal:</p>
+
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Pilih Customer (Data Source)</strong>
+        <p>Pilih customer yang datanya akan digunakan untuk mengisi variabel template.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Masukkan Nomor HP Tujuan Test</strong>
+        <p>Pesan dikirim ke nomor ini (bukan ke customer). Masukkan nomor Anda sendiri untuk pengujian.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+        <strong>Edit Template (opsional)</strong>
+        <p>Sesuaikan template pesan. Variabel yang tersedia: <code>{customerName}</code>, <code>{totalOwing}</code>, <code>{invoiceList}</code></p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">4</div>
+    <div class="step-content">
+        <strong>Klik "Kirim Test Broadcast"</strong>
+        <p>Cek WhatsApp Anda untuk memastikan format pesan sesuai harapan.</p>
+    </div>
+</div>
+
+<h3 id="jadwal">7.3 Jadwal Otomatis (SYNC & BROADCAST)</h3>
+
+<p>Sistem mendukung penjadwalan otomatis untuk dua jenis tugas:</p>
+
+<table>
+    <tr><th>Tipe</th><th>Keterangan</th></tr>
+    <tr><td><span class="badge blue">Auto Sync Accurate</span></td><td>Menarik data piutang dari Accurate secara otomatis sesuai jadwal</td></tr>
+    <tr><td><span class="badge purple">Auto Broadcast WA</span></td><td>Mengirim pesan tagihan ke customer secara otomatis sesuai jadwal</td></tr>
+</table>
+
+<h4>Parameter Jadwal</h4>
+
+<table>
+    <tr><th>Parameter</th><th>Opsi</th><th>Keterangan</th></tr>
+    <tr><td>Frekuensi</td><td>Setiap Hari / Setiap Minggu / Setiap Bulan</td><td>Kapan jadwal dijalankan</td></tr>
+    <tr><td>Hari (Mingguan)</td><td>Senin–Minggu</td><td>Hanya untuk frekuensi mingguan</td></tr>
+    <tr><td>Tanggal (Bulanan)</td><td>1–31</td><td>Hanya untuk frekuensi bulanan</td></tr>
+    <tr><td>Jam</td><td>Time picker</td><td>Waktu eksekusi</td></tr>
+    <tr><td>Status</td><td>Aktif / Non-Aktif</td><td>Toggle on/off</td></tr>
+</table>
+
+<h4>Parameter Khusus — Auto Sync</h4>
+<ul>
+    <li><strong>Pilih Cabang</strong> — filter cabang untuk sync (kosongkan untuk semua cabang)</li>
+    <li><strong>Status Invoice</strong> — Belum Lunas / Lunas / Semua</li>
+    <li><strong>Rentang Tanggal</strong> — dari tanggal & sampai tanggal (opsional)</li>
+</ul>
+
+<h4>Parameter Khusus — Auto Broadcast</h4>
+<ul>
+    <li><strong>Template Pesan</strong> — template dengan variabel <code>{customerName}</code>, <code>{totalOwing}</code>, <code>{invoiceList}</code></li>
+    <li><strong>Min. Umur Faktur</strong> — hanya kirim jika umur faktur ≥ X hari</li>
+    <li><strong>Min. Lewat Jatuh Tempo</strong> — hanya kirim jika sudah lewat jatuh tempo ≥ X hari</li>
+</ul>
+
+<!-- ==================== 8. ABSENSI FAKTUR ==================== -->
+<h2 id="absensi">8. Absensi Faktur Harian</h2>
+
+<p>Menu <strong>Absensi Faktur</strong> digunakan untuk melacak faktur harian yang dibawa oleh sales. Fitur ini memastikan setiap faktur yang keluar tercatat dan diketahui statusnya — apakah masih di tangan sales atau sudah dikembalikan.</p>
+
+<div class="flow-diagram">
+    <div class="flow-box" style="background:var(--primary-light);color:var(--primary);">Buat Sesi</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--orange-light);color:var(--orange);">Tambah Faktur</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--green-light);color:var(--green);">Terima Kembali</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--purple-light);color:var(--purple);">Sync ke SO</div>
+</div>
+
+<h3 id="absensi-sesi">8.1 Membuat Sesi Absensi</h3>
+
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Buka menu Absensi Faktur</strong>
+        <p>Klik "Absensi Faktur" di header Dashboard.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Klik "+ Sesi Baru"</strong>
+        <p>Dialog form akan muncul. Isi:</p>
+    </div>
+</div>
+
+<table>
+    <tr><th>Field</th><th>Keterangan</th></tr>
+    <tr><td>Nama Sales <strong>*</strong></td><td>Nama sales yang membawa faktur hari ini</td></tr>
+    <tr><td>Tanggal</td><td>Tanggal absensi (default: hari ini)</td></tr>
+    <tr><td>Catatan</td><td>Catatan tambahan (opsional)</td></tr>
+</table>
+
+<h3 id="absensi-scan">8.2 Menambah Faktur (Manual & Scan)</h3>
+
+<p>Di halaman detail sesi, terdapat <strong>dua cara menambahkan faktur</strong>:</p>
+
+<h4>A. Input Manual dengan Autocomplete</h4>
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Ketik di field "No. Faktur"</strong>
+        <p>Saat mengetik, sistem akan menampilkan saran (autocomplete) dari data SoItem yang tersimpan. Daftar saran menampilkan nomor faktur, nama customer, dan nominal.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Pilih dari saran atau isi manual</strong>
+        <p>Klik saran untuk mengisi otomatis semua field, atau isi manual jika faktur tidak ada di data SO.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+        <strong>Klik "Tambah"</strong>
+        <p>Faktur ditambahkan ke daftar dengan status <span class="badge orange">Dibawa</span>.</p>
+    </div>
+</div>
+
+<h4>B. Scan Barcode via Kamera</h4>
+<div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+        <strong>Klik tombol "Scan Barcode" (biru)</strong>
+        <p>Kamera perangkat akan terbuka dengan scanner barcode.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+        <strong>Arahkan ke barcode faktur</strong>
+        <p>Nomor faktur otomatis terisi. Jika cocok dengan data SO, field customer dan nominal juga otomatis terisi.</p>
+    </div>
+</div>
+<div class="step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+        <strong>Klik "Tambah"</strong>
+        <p>Faktur ditambahkan ke daftar.</p>
+    </div>
+</div>
+
+<h3 id="absensi-return">8.3 Terima Kembali Faktur</h3>
+
+<p>Saat sales mengembalikan faktur, klik tombol <strong>✅ (centang hijau)</strong> pada baris faktur. Status berubah dari <span class="badge orange">Dibawa</span> menjadi <span class="badge green">Kembali</span> beserta timestamp pengembalian.</p>
+
+<p>Jika ingin membatalkan pengembalian, klik tombol <strong>↩ (undo)</strong> — status kembali ke <span class="badge orange">Dibawa</span>.</p>
+
+<p><strong>Filter </strong> tersedia untuk menampilkan faktur berdasarkan status:</p>
+<ul>
+    <li><strong>Semua</strong> — tampilkan semua faktur</li>
+    <li><strong>Dibawa</strong> — hanya faktur yang masih di tangan sales</li>
+    <li><strong>Kembali</strong> — hanya faktur yang sudah dikembalikan</li>
+</ul>
+
+<h3 id="absensi-sync">8.4 Sync ke SO</h3>
+
+<p>Tombol <strong>"Sync ke SO"</strong> di halaman utama Absensi Faktur akan menyinkronkan data absensi ke module SO:</p>
+
+<div class="info-box green">
+    <strong>✅ Efek Sync</strong>
+    <ul style="margin-top:4px;">
+        <li>Faktur dengan status <span class="badge orange">Dibawa (OUT)</span> → SoItem di-update:<br>
+            — <code>existenceStatus</code> = "Dibawa Sales"<br>
+            — <code>status</code> = "MATCHED" (scan OK)<br>
+            — <code>remarks</code> = "Dibawa oleh: [nama sales] ([tanggal])"
+        </li>
+        <li>Faktur dengan status <span class="badge green">Kembali (RETURNED)</span> → SoItem di-reset:<br>
+            — <code>existenceStatus</code> = null<br>
+            — <code>remarks</code> = null
+        </li>
+    </ul>
+</div>
+
+<!-- ==================== 9. SETTINGS ==================== -->
+<h2 id="settings">9. Settings (Pengaturan Sistem)</h2>
+
+<p>Halaman Settings (⚙️) hanya dapat diakses oleh <span class="badge blue">ADMIN</span>.</p>
+
+<h3 id="settings-users">9.1 Manajemen User</h3>
+
+<p>Di tab <strong>Users</strong>, Admin dapat:</p>
+<ul>
+    <li><strong>Menambah user baru</strong> — isi username, password, dan pilih role (ADMIN/FINANCE/STAFF)</li>
+    <li><strong>Mengubah user</strong> — edit username, role, atau reset password</li>
+    <li><strong>Menghapus user</strong> — hapus akun yang tidak diperlukan</li>
+</ul>
+
+<h3 id="settings-roles">9.2 Konfigurasi Role & Kolom</h3>
+
+<p>Di tab <strong>Roles</strong>, Admin mengatur kolom mana saja yang tampil untuk masing-masing role saat melihat data SO di halaman Adjustment:</p>
+
+<table>
+    <tr><th>Kolom</th><th>Keterangan</th></tr>
+    <tr><td>No Faktur</td><td>Nomor transaksi faktur</td></tr>
+    <tr><td>Tanggal</td><td>Tanggal transaksi</td></tr>
+    <tr><td>Nama Customer</td><td>Nama pelanggan</td></tr>
+    <tr><td>Total Nilai</td><td>Nilai nominal faktur</td></tr>
+    <tr><td>Sisa Tagihan</td><td>Outstanding piutang</td></tr>
+    <tr><td>Keterangan</td><td>Deskripsi faktur</td></tr>
+    <tr><td>Status Approval</td><td>Status persetujuan faktur</td></tr>
+</table>
+
+<p>Centang/hapus centang kolom untuk mengatur visibilitas per role, lalu Simpan.</p>
+
+<h3 id="settings-logs">9.3 System Logs</h3>
+
+<p>Tab <strong>System Logs</strong> menampilkan riwayat aktivitas otomatis sistem:</p>
+<ul>
+    <li>Log broadcast WhatsApp (berhasil/gagal, jumlah pesan, timestamp)</li>
+    <li>Log sync data dari Accurate</li>
+    <li>Error dan peringatan sistem</li>
+</ul>
+
+<h3>9.4 Jadwal Broadcast & Auto-Sync</h3>
+<p>Pengaturan jadwal otomatis juga tersedia di tab terpisah. Lihat <a href="#jadwal">Bagian 7.3</a> untuk detail lengkap.</p>
+
+<!-- ==================== 10. ALUR KERJA ==================== -->
+<h2 id="alur-kerja">10. Alur Kerja Lengkap</h2>
+
+<h3>Alur Stock Opname (SO)</h3>
+
+<div class="flow-diagram">
+    <div class="flow-box" style="background:var(--primary-light);color:var(--primary);">SO Release<br><small>Tarik data Accurate</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--orange-light);color:var(--orange);">SO Process<br><small>Scan faktur</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--purple-light);color:var(--purple);">Adjustment<br><small>Review & finalisasi</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--green-light);color:var(--green);">Approval<br><small>Persetujuan Finance</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:var(--gray-100);color:var(--gray-700);">Export<br><small>XLSX / PDF</small></div>
+</div>
+
+<table>
+    <tr><th>Tahap</th><th>PIC</th><th>Status Sesi</th><th>Aksi</th></tr>
+    <tr><td>1. SO Release</td><td>Admin</td><td>OPEN</td><td>Tarik data dari Accurate, buat periode baru</td></tr>
+    <tr><td>2. SO Process</td><td>Staff/Admin</td><td>OPEN</td><td>Scan barcode faktur satu per satu</td></tr>
+    <tr><td>3. Adjustment</td><td>Staff/Admin</td><td>OPEN</td><td>Review selisih, set status keberadaan, tambahkan keterangan</td></tr>
+    <tr><td>4. Submit</td><td>Staff/Admin</td><td>SUBMITTED</td><td>Submit untuk approval (data terkunci)</td></tr>
+    <tr><td>5. Approval</td><td>Finance/Admin</td><td>FINALIZED</td><td>Finance menyetujui hasil SO</td></tr>
+    <tr><td>6. Export</td><td>Finance/Admin</td><td>FINALIZED</td><td>Download laporan XLSX/PDF</td></tr>
+</table>
+
+<h3>Alur Absensi Faktur</h3>
+
+<table>
+    <tr><th>Tahap</th><th>Aksi</th></tr>
+    <tr><td>1. Buat Sesi</td><td>Buat sesi baru per sales per hari</td></tr>
+    <tr><td>2. Serahkan Faktur</td><td>Scan/input faktur yang dibawa sales → status <span class="badge orange">Dibawa</span></td></tr>
+    <tr><td>3. Sales Berangkat</td><td>Sales membawa faktur ke lapangan</td></tr>
+    <tr><td>4. Sales Kembali</td><td>Terima kembali faktur → status <span class="badge green">Kembali</span></td></tr>
+    <tr><td>5. Sync</td><td>Klik "Sync ke SO" → update status di module SO</td></tr>
+</table>
+
+<h3>Alur Piutang & Broadcast</h3>
+
+<table>
+    <tr><th>Tahap</th><th>Aksi</th></tr>
+    <tr><td>1. Setup WAHA</td><td>Konfigurasi gateway WhatsApp di Piutang Settings</td></tr>
+    <tr><td>2. Sync Piutang</td><td>Tarik data piutang dari Accurate (manual atau otomatis)</td></tr>
+    <tr><td>3. Review Data</td><td>Cek data tagihan di tabel Piutang</td></tr>
+    <tr><td>4. Broadcast</td><td>Kirim pesan tagihan ke customer via WhatsApp (manual atau terjadwal)</td></tr>
+</table>
+
+<!-- ==================== 11. FAQ ==================== -->
+<h2 id="faq">11. FAQ — Pertanyaan Umum</h2>
+
+<h4>Q: Apakah data SO bisa diedit setelah Submit?</h4>
+<p><strong>A:</strong> Tidak. Setelah Submit for Approval, data terkunci (read-only). Hubungi Admin jika perlu perubahan — Admin dapat membuka kembali sesi.</p>
+
+<h4>Q: Bagaimana jika barcode faktur tidak terbaca?</h4>
+<p><strong>A:</strong> Gunakan input manual — ketik nomor faktur di field yang tersedia lalu tekan Enter. Anda juga bisa menggunakan fitur scan kamera.</p>
+
+<h4>Q: Apa bedanya SO Process dan Adjustment?</h4>
+<p><strong>A:</strong> <strong>SO Process</strong> adalah tahap scan/verifikasi keberadaan faktur. <strong>Adjustment</strong> adalah tahap review hasil scan sebelum submit untuk approval.</p>
+
+<h4>Q: Kenapa broadcast WhatsApp tidak terkirim?</h4>
+<p><strong>A:</strong> Pastikan:
+<br>1) Konfigurasi WAHA sudah benar (URL, Session ID, API Key)
+<br>2) Session WhatsApp aktif (tidak terputus)
+<br>3) Test Connection berhasil
+<br>4) Nomor HP customer dalam format internasional (628xxx)</p>
+
+<h4>Q: Bagaimana cara faktur otomatis bertanda "Dibawa Sales" di SO?</h4>
+<p><strong>A:</strong> Gunakan menu <strong>Absensi Faktur</strong>: buat sesi → tambahkan faktur → jika belum dikembalikan, klik <strong>"Sync ke SO"</strong>. Faktur tersebut akan otomatis bertanda "Dibawa Sales" dengan status scan OK di SO.</p>
+
+<h4>Q: Apakah jadwal broadcast bisa diatur per cabang?</h4>
+<p><strong>A:</strong> Untuk tipe <strong>Auto Sync</strong>, parameter cabang bisa diatur. Untuk <strong>Auto Broadcast</strong>, broadcast dikirim ke semua customer yang memiliki piutang sesuai filter umur faktur dan jatuh tempo yang dikonfigurasi.</p>
+
+<h4>Q: Bisakah satu faktur muncul di beberapa sesi absensi?</h4>
+<p><strong>A:</strong> Ya, satu nomor faktur bisa muncul di sesi berbeda. Saat Sync, jika ada satu sesi yang masih menandai faktur sebagai "Dibawa", status di SO tetap "Dibawa Sales".</p>
+
+<hr class="section-divider">
+
+<div style="text-align:center; padding: 30px 0; color: var(--gray-500); font-size: 10pt;">
+    <p><strong>PT. Gama Agro Sejati</strong></p>
+    <p>Manual Book GAS PDE — SO Faktur Jual v2.0</p>
+    <p>© 2026 Project Division — Confidential</p>
+</div>
+
+</div>
+
+</body>
+</html>
