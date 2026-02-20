@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Smartphone, Plus, Settings } from "lucide-react";
+import { LogOut, Smartphone, Plus, Settings, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +37,13 @@ export default function DashboardHeader({ username, role }: { username: string, 
                         >
                             <Smartphone size={16} />
                             Piutang
+                        </Link>
+                        <Link
+                            href="/faktur-absensi"
+                            className="flex items-center gap-2 bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-orange-600 px-4 h-10 rounded-lg font-semibold transition shadow-sm text-sm"
+                        >
+                            <ClipboardList size={16} />
+                            Absensi Faktur
                         </Link>
                         <Link
                             href="/so/release"

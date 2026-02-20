@@ -144,3 +144,37 @@ model SystemSetting {
   value           String
   description     String?
 }
+
+model FakturAbsensi {
+  id          String   @id @default(uuid())
+  date        DateTime // Tanggal absensi
+  salesName   String   // Nama sales
+  notes       String?
+  status      String   @default("OPEN") // OPEN, CLOSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       FakturAbsensiItem[]
+
+  @@index([date])
+  @@index([salesName])
+}
+
+model FakturAbsensiItem {
+  id            String   @id @default(uuid())
+  absensiId     String
+  absensi       FakturAbsensi @relation(fields: [absensiId], references: [id], onDelete: Cascade)
+
+  transNo       String   // Nomor faktur
+  customerName  String
+  amount        Float    @default(0)
+
+  handedAt      DateTime @default(now())
+  returnedAt    DateTime?
+  returnStatus  String   @default("OUT") // OUT, RETURNED
+  remarks       String?
+
+  @@index([absensiId])
+  @@index([transNo])
+  @@index([returnStatus])
+}
