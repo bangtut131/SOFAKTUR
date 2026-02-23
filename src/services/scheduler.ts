@@ -34,6 +34,20 @@ export const SchedulerService = {
         Object.values(this.jobs).forEach(job => job.stop());
         this.jobs = {};
         try {
+            // Internal Keep-Alive Job for Supabase (Runs every 3 days at midnight)
+            const keepAliveTask = cron.schedule('0 0 */3 * *', async () => {
+                try {
+                    console.log(`[KEEP-ALIVE] Pinging database to prevent Supabase pause...`);
+                    await prisma.$queryRaw`SELECT 1`;
+                    console.log(`[KEEP-ALIVE] Database pinged successfully at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })}`);
+                } catch (e: any) {
+                    console.error(`[KEEP-ALIVE] Failed to ping database:`, e.message);
+                }
+            }, {
+                timezone: "Asia/Jakarta"
+            });
+            this.jobs['system-keep-alive'] = keepAliveTask;
+
             const schedules = await prisma.broadcastSchedule.findMany({ where: { isEnabled: true } });
             schedules.forEach(schedule => {
                 if (cron.validate(schedule.cronExpression)) {
