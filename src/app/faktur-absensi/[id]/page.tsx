@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
     ArrowLeft, Plus, Trash2, RotateCcw, CheckCircle, Clock,
-    Package, User, Calendar, Search, X, ClipboardList, Lock, Camera
+    Package, User, Calendar, Search, X, ClipboardList, Lock, Camera, FileDown
 } from "lucide-react";
 import CameraScanner from "@/components/CameraScanner";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface AbsensiItem {
     id: string;
@@ -233,6 +235,141 @@ export default function AbsensiDetailPage() {
         }
     };
 
+    const handleExportPdf = () => {
+        if (!session) return;
+
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 14;
+
+        // Title
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('BUKTI SERAH TERIMA FAKTUR', pageWidth / 2, 18, { align: 'center' });
+
+        // Session Info
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const dateStr = new Date(session.date).toLocaleDateString('id-ID', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+        doc.text(`Nama Sales   : ${session.salesName}`, margin, 28);
+        doc.text(`Tanggal         : ${dateStr}`, margin, 34);
+        doc.text(`Status             : ${session.status}`, margin, 40);
+        if (session.notes) {
+            doc.text(`Catatan          : ${session.notes}`, margin, 46);
+        }
+
+        // Table
+        const tableData = items.map((item, idx) => [
+            (idx + 1).toString(),
+            item.transNo,
+            item.customerName,
+            formatCurrency(item.amount),
+            new Date(item.handedAt).toLocaleString('id-ID', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }),
+            item.returnedAt ? new Date(item.returnedAt).toLocaleString('id-ID', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }) : '-',
+            item.returnStatus === 'OUT' ? 'Dibawa' : 'Kembali',
+            '' // Kolom Paraf/TTD kosong
+        ]);
+
+        const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+        const startY = session.notes ? 50 : 44;
+
+        autoTable(doc, {
+            startY,
+            head: [['No', 'No. Faktur', 'Customer', 'Nominal (Rp)', 'Diserahkan', 'Dikembalikan', 'Status', 'Paraf/TTD Sales']],
+            body: tableData,
+            foot: [['', '', 'TOTAL', formatCurrency(totalAmount), '', '', '', '']],
+            theme: 'grid',
+            headStyles: {
+                fillColor: [249, 115, 22],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 8,
+                halign: 'center',
+            },
+            footStyles: {
+                fillColor: [243, 244, 246],
+                textColor: [0, 0, 0],
+                fontStyle: 'bold',
+                fontSize: 9,
+            },
+            bodyStyles: {
+                fontSize: 8,
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 45 },
+                3: { halign: 'right', cellWidth: 30 },
+                4: { halign: 'center', cellWidth: 30 },
+                5: { halign: 'center', cellWidth: 30 },
+                6: { halign: 'center', cellWidth: 22 },
+                7: { halign: 'center', cellWidth: 35, minCellHeight: 12 },
+            },
+            styles: {
+                cellPadding: 3,
+                lineColor: [200, 200, 200],
+                lineWidth: 0.3,
+            },
+            didParseCell: (data: any) => {
+                // Style status column
+                if (data.section === 'body' && data.column.index === 6) {
+                    if (data.cell.raw === 'Dibawa') {
+                        data.cell.styles.textColor = [180, 83, 9];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (data.cell.raw === 'Kembali') {
+                        data.cell.styles.textColor = [21, 128, 61];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            },
+        });
+
+        // Signature Block
+        const finalY = (doc as any).lastAutoTable.finalY + 15;
+        const sigWidth = 70;
+        const sigGap = 30;
+        const sigX1 = margin + 20;
+        const sigX2 = pageWidth - margin - sigWidth - 20;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+
+        // Left: Penyerah
+        doc.text('Yang Menyerahkan,', sigX1, finalY);
+        doc.text('(Admin)', sigX1, finalY + 5);
+        doc.line(sigX1, finalY + 28, sigX1 + sigWidth, finalY + 28);
+        doc.text('Nama: _________________', sigX1, finalY + 34);
+
+        // Right: Penerima (Sales)
+        doc.text('Yang Menerima,', sigX2, finalY);
+        doc.text(`(${session.salesName})`, sigX2, finalY + 5);
+        doc.line(sigX2, finalY + 28, sigX2 + sigWidth, finalY + 28);
+        doc.text('Nama: _________________', sigX2, finalY + 34);
+
+        // Footer
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7);
+            doc.setTextColor(150);
+            const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+            doc.text(`Dicetak: ${now}`, margin, doc.internal.pageSize.getHeight() - 8);
+            doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 8, { align: 'right' });
+        }
+
+        const fileName = `Serah_Terima_Faktur_${session.salesName.replace(/\s+/g, '_')}_${session.date.split('T')[0]}.pdf`;
+        doc.save(fileName);
+    };
+
     if (loading) {
         return (
             <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -291,6 +428,13 @@ export default function AbsensiDetailPage() {
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            <button
+                                onClick={handleExportPdf}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition shadow-sm"
+                                title="Export PDF Serah Terima"
+                            >
+                                <FileDown size={14} /> Export PDF
+                            </button>
                             {isOpen ? (
                                 <button
                                     onClick={handleCloseSession}
