@@ -18,6 +18,7 @@ model SoSession {
   // Stats
   totalItems       Int      @default(0)
   totalValue       Float    @default(0)
+  excludedCustomers String  @default("[]") // JSON array of excluded customer names
   
   // Relations
   items            SoItem[]

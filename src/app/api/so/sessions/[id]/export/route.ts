@@ -19,9 +19,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         }
 
         const workbook = new ExcelJS.Workbook();
+
+        // Split items: main vs excluded
+        const mainItems = session.items.filter(item => item.existenceStatus !== 'Exclude');
+        const excludedItems = session.items.filter(item => item.existenceStatus === 'Exclude');
+
+        // ====== SHEET 1: Detail SO (non-excluded) ======
         const worksheet = workbook.addWorksheet('Detail SO');
 
-        // Define Columns
         worksheet.columns = [
             { header: 'Status', key: 'status', width: 12 },
             { header: 'No Faktur', key: 'transNo', width: 20 },
@@ -43,13 +48,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         headerRow.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FF1F2937' } // Gray-800 like
+            fgColor: { argb: 'FF1F2937' }
         };
         headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
         headerRow.height = 30;
 
-        // Populate Data
-        session.items.forEach(item => {
+        // Populate Data (main items only)
+        mainItems.forEach(item => {
             const row = worksheet.addRow({
                 status: item.status === 'MATCHED' ? 'OK' : 'PENDING',
                 transNo: item.transNo,
@@ -65,31 +70,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 scannedAt: item.scannedAt ? new Date(item.scannedAt).toLocaleString('id-ID') : '-'
             });
 
-            // Conditional Styling per Row
-            // Status Check (Green for OK)
             if (item.status === 'MATCHED') {
-                row.getCell('status').font = { color: { argb: 'FF166534' }, bold: true }; // Green-700
+                row.getCell('status').font = { color: { argb: 'FF166534' }, bold: true };
             } else {
-                row.getCell('status').font = { color: { argb: 'FFCA8A04' }, bold: true }; // Yellow-600
+                row.getCell('status').font = { color: { argb: 'FFCA8A04' }, bold: true };
             }
 
-            // Existence Status Styling
             const extCell = row.getCell('existenceStatus');
             if (item.existenceStatus === 'Ada') {
-                extCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBF7D0' } }; // Green-200
+                extCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBF7D0' } };
             } else if (item.existenceStatus === 'Hilang') {
-                extCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFECACA' } }; // Red-200
+                extCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFECACA' } };
             } else if (item.existenceStatus === 'Dibawa Sales') {
-                extCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE68A' } }; // Amber-200
+                extCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE68A' } };
             }
 
-            // Format Numbers
             row.getCell('amount').numFmt = '#,##0';
             row.getCell('primeOwing').numFmt = '#,##0';
         });
 
-        // Add Borders to all cells
-        worksheet.eachRow((row, rowNumber) => {
+        // Add borders
+        worksheet.eachRow((row) => {
             row.eachCell((cell) => {
                 cell.border = {
                     top: { style: 'thin' },
@@ -100,9 +101,86 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             });
         });
 
+        // ====== SHEET 2: Excluded Invoices ======
+        if (excludedItems.length > 0) {
+            const exSheet = workbook.addWorksheet('Excluded Invoices');
+
+            exSheet.columns = [
+                { header: 'No', key: 'no', width: 6 },
+                { header: 'No Faktur', key: 'transNo', width: 20 },
+                { header: 'Tanggal', key: 'transDate', width: 15 },
+                { header: 'Customer', key: 'customerName', width: 35 },
+                { header: 'Keterangan', key: 'description', width: 40 },
+                { header: 'Total Nilai', key: 'amount', width: 20 },
+                { header: 'Sisa Tagihan', key: 'primeOwing', width: 20 },
+                { header: 'Alasan Exclude', key: 'remarks', width: 30 },
+            ];
+
+            // Header styling (purple theme)
+            const exHeaderRow = exSheet.getRow(1);
+            exHeaderRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+            exHeaderRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF7C3AED' } // Purple-600
+            };
+            exHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+            exHeaderRow.height = 30;
+
+            // Data rows
+            excludedItems.forEach((item, idx) => {
+                const row = exSheet.addRow({
+                    no: idx + 1,
+                    transNo: item.transNo,
+                    transDate: item.transDate,
+                    customerName: item.customerName,
+                    description: item.description || '-',
+                    amount: item.amount,
+                    primeOwing: item.primeOwing,
+                    remarks: item.remarks || 'Excluded dari SO',
+                });
+
+                row.getCell('amount').numFmt = '#,##0';
+                row.getCell('primeOwing').numFmt = '#,##0';
+            });
+
+            // Summary row
+            const totalExAmount = excludedItems.reduce((sum, i) => sum + i.amount, 0);
+            const totalExOwing = excludedItems.reduce((sum, i) => sum + i.primeOwing, 0);
+            const summaryRow = exSheet.addRow({
+                no: '',
+                transNo: '',
+                transDate: '',
+                customerName: `TOTAL: ${excludedItems.length} faktur excluded`,
+                description: '',
+                amount: totalExAmount,
+                primeOwing: totalExOwing,
+                remarks: '',
+            });
+            summaryRow.font = { bold: true, size: 11 };
+            summaryRow.getCell('amount').numFmt = '#,##0';
+            summaryRow.getCell('primeOwing').numFmt = '#,##0';
+            summaryRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF3E8FF' } // Purple-50
+            };
+
+            // Borders
+            exSheet.eachRow((row) => {
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            });
+        }
+
         const buffer = await workbook.xlsx.writeBuffer();
 
-        // Clean period name for filename
         const safePeriodName = session.periodName.replace(/[^a-zA-Z0-9]/g, '_');
 
         return new NextResponse(buffer, {
@@ -117,3 +195,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         return NextResponse.json({ error: "Failed to export data" }, { status: 500 });
     }
 }
+

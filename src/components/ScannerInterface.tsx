@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera } from "lucide-react";
+import { Scan, ArrowLeft, CheckCircle, AlertTriangle, Search, ArrowRight, ArrowUp, ArrowDown, Download, Camera, UserX, X as XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CameraScanner from "./CameraScanner";
 import { TableVirtuoso, Virtuoso } from "react-virtuoso";
@@ -102,6 +102,7 @@ const _ScannerRow = React.forwardRef<HTMLTableRowElement, {
             case 'Ada': return 'bg-green-200 text-green-900 border border-green-300';
             case 'Dibawa Sales': return 'bg-yellow-100 text-yellow-900 border border-yellow-300';
             case 'Hilang': return 'bg-red-200 text-red-900 border border-red-300';
+            case 'Exclude': return 'bg-purple-200 text-purple-900 border border-purple-300';
             default: return 'text-gray-800';
         }
     };
@@ -277,6 +278,7 @@ const ScannerCard = React.memo(function ScannerCard({ item, onUpdate }: {
                         <option value="Ada">Ada</option>
                         <option value="Hilang">Hilang</option>
                         <option value="Dibawa Sales">Dibawa Sales</option>
+                        <option value="Exclude">Exclude</option>
                     </select>
                 </div>
                 <div>
@@ -327,11 +329,87 @@ export default function ScannerInterface({
     const [colFilters, setColFilters] = useState<{ [key: string]: string }>({});
 
     // Stats
-    const matchedCount = items.filter(i => i.status === 'MATCHED').length;
+    const excludedItems = items.filter(i => i.existenceStatus === 'Exclude');
+    const nonExcludedItems = items.filter(i => i.existenceStatus !== 'Exclude');
+    const matchedCount = nonExcludedItems.filter(i => i.status === 'MATCHED').length;
     const adas = items.filter(i => i.existenceStatus === 'Ada').length;
     const hilangs = items.filter(i => i.existenceStatus === 'Hilang').length;
     const sales = items.filter(i => i.existenceStatus === 'Dibawa Sales').length;
-    const pendingCount = items.length - matchedCount;
+    const excludeCount = excludedItems.length;
+    const pendingCount = nonExcludedItems.length - matchedCount;
+
+    // Exclude Customer Modal State
+    interface CustomerInfo {
+        name: string;
+        invoiceCount: number;
+        totalAmount: number;
+        totalOwing: number;
+        isExcluded: boolean;
+    }
+    const [showExcludeModal, setShowExcludeModal] = useState(false);
+    const [excludeCustomers, setExcludeCustomers] = useState<CustomerInfo[]>([]);
+    const [excludeSelected, setExcludeSelected] = useState<Set<string>>(new Set());
+    const [excludeLoading, setExcludeLoading] = useState(false);
+    const [excludeSaving, setExcludeSaving] = useState(false);
+    const [excludeSearch, setExcludeSearch] = useState('');
+
+    const openExcludeModal = async () => {
+        setShowExcludeModal(true);
+        setExcludeLoading(true);
+        try {
+            const res = await fetch(`/api/so/sessions/${sessionId}/exclude`);
+            const data = await res.json();
+            setExcludeCustomers(data.customers || []);
+            setExcludeSelected(new Set((data.excludedCustomers || []) as string[]));
+        } catch (e) {
+            console.error('Failed to load exclude data:', e);
+        } finally {
+            setExcludeLoading(false);
+        }
+    };
+
+    const toggleExcludeCustomer = (name: string) => {
+        setExcludeSelected(prev => {
+            const next = new Set(prev);
+            if (next.has(name)) next.delete(name);
+            else next.add(name);
+            return next;
+        });
+    };
+
+    const saveExcludeCustomers = async () => {
+        setExcludeSaving(true);
+        try {
+            const res = await fetch(`/api/so/sessions/${sessionId}/exclude`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ excludedCustomers: Array.from(excludeSelected) })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Refresh items from server
+                const sessionRes = await fetch(`/api/so/sessions/${sessionId}`);
+                const sessionData = await sessionRes.json();
+                if (sessionData.session?.items) {
+                    setItems(sessionData.session.items);
+                }
+                setShowExcludeModal(false);
+            } else {
+                alert(data.error || 'Gagal menyimpan');
+            }
+        } catch (e) {
+            alert('Error menyimpan exclude customers');
+        } finally {
+            setExcludeSaving(false);
+        }
+    };
+
+    const formatCurrencyShort = (n: number) => {
+        if (n >= 1_000_000_000) return `Rp${(n / 1_000_000_000).toFixed(1)}M`;
+        if (n >= 1_000_000) return `Rp${(n / 1_000_000).toFixed(1)}jt`;
+        if (n >= 1_000) return `Rp${(n / 1_000).toFixed(0)}rb`;
+        return `Rp${n}`;
+    };
 
     // Focus on mount
     useEffect(() => {
@@ -580,9 +658,19 @@ export default function ScannerInterface({
                         <div className="text-[10px] font-bold text-orange-800">SALES</div>
                         <div className="font-bold text-lg text-orange-900">{sales}</div>
                     </div>
+                    <div className="px-3 py-1 bg-purple-100 rounded text-center min-w-[60px]">
+                        <div className="text-[10px] font-bold text-purple-800">EXCLUDE</div>
+                        <div className="font-bold text-lg text-purple-900">{excludeCount}</div>
+                    </div>
                 </div>
 
                 <div className="flex gap-2 ml-auto">
+                    <button
+                        onClick={openExcludeModal}
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition"
+                    >
+                        <UserX size={18} /> Exclude Customer
+                    </button>
                     <button
                         onClick={handleExport}
                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition"
@@ -687,6 +775,92 @@ export default function ScannerInterface({
                     />
                 </div>
             </div>
+            {/* Exclude Customer Modal */}
+            {showExcludeModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowExcludeModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="p-5 border-b flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                    <UserX className="text-purple-600" size={20} />
+                                    Exclude Customer dari SO
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">Pilih customer yang tidak perlu di-SO</p>
+                            </div>
+                            <button onClick={() => setShowExcludeModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                                <XIcon size={18} className="text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 border-b">
+                            <input
+                                type="text"
+                                placeholder="Cari nama customer..."
+                                value={excludeSearch}
+                                onChange={e => setExcludeSearch(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-2">
+                            {excludeLoading ? (
+                                <div className="p-8 text-center text-gray-400">Memuat data customer...</div>
+                            ) : (
+                                <div className="space-y-1">
+                                    {excludeCustomers
+                                        .filter(c => !excludeSearch || c.name.toLowerCase().includes(excludeSearch.toLowerCase()))
+                                        .map(customer => (
+                                            <label
+                                                key={customer.name}
+                                                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${excludeSelected.has(customer.name)
+                                                        ? 'bg-purple-50 border border-purple-200'
+                                                        : 'hover:bg-gray-50 border border-transparent'
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={excludeSelected.has(customer.name)}
+                                                    onChange={() => toggleExcludeCustomer(customer.name)}
+                                                    className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-bold text-sm text-gray-800 truncate">{customer.name}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {customer.invoiceCount} faktur • {formatCurrencyShort(customer.totalAmount)}
+                                                    </div>
+                                                </div>
+                                                {excludeSelected.has(customer.name) && (
+                                                    <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">EXCLUDE</span>
+                                                )}
+                                            </label>
+                                        ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+                            <div className="text-sm text-gray-600">
+                                <span className="font-bold text-purple-700">{excludeSelected.size}</span> customer dipilih
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowExcludeModal(false)}
+                                    className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={saveExcludeCustomers}
+                                    disabled={excludeSaving}
+                                    className="px-5 py-2 text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow transition disabled:opacity-50"
+                                >
+                                    {excludeSaving ? 'Menyimpan...' : 'Simpan'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
