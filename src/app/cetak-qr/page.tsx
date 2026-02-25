@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, QrCode, Filter, RefreshCw, Download, FileText } from "lucide-react";
+import { ArrowLeft, QrCode, Filter, RefreshCw, Download, FileText, UserX, Check } from "lucide-react";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 
@@ -68,6 +68,38 @@ export default function CetakQRPage() {
     // Filter
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [excludedCustomers, setExcludedCustomers] = useState<Set<string>>(new Set());
+
+    // Derived: unique customers + filtered items
+    const uniqueCustomers = useMemo(() => {
+        const names = new Set(items.map(i => i.customerName));
+        return Array.from(names).sort();
+    }, [items]);
+
+    const filteredItems = useMemo(() => {
+        if (excludedCustomers.size === 0) return items;
+        return items.filter(i => !excludedCustomers.has(i.customerName));
+    }, [items, excludedCustomers]);
+
+    const toggleExclude = (name: string) => {
+        setExcludedCustomers(prev => {
+            const next = new Set(prev);
+            if (next.has(name)) {
+                next.delete(name);
+            } else {
+                next.add(name);
+            }
+            return next;
+        });
+    };
+
+    const toggleExcludeAll = () => {
+        if (excludedCustomers.size === uniqueCustomers.length) {
+            setExcludedCustomers(new Set());
+        } else {
+            setExcludedCustomers(new Set(uniqueCustomers));
+        }
+    };
 
     useEffect(() => {
         // Fetch sessions
@@ -108,6 +140,7 @@ export default function CetakQRPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setItems(data.items || []);
+            setExcludedCustomers(new Set()); // Reset exclude on new fetch
         } catch (error: any) {
             alert(`Gagal: ${error.message}`);
         } finally {
@@ -116,8 +149,8 @@ export default function CetakQRPage() {
     };
 
     const generatePDF = async () => {
-        if (items.length === 0) {
-            alert("Tidak ada data untuk dicetak!");
+        if (filteredItems.length === 0) {
+            alert("Tidak ada data untuk dicetak! (semua customer di-exclude?)");
             return;
         }
 
@@ -127,10 +160,10 @@ export default function CetakQRPage() {
             const cfg = LAYOUTS[layout];
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            const totalPages = Math.ceil(items.length / cfg.perPage);
+            const printItems = filteredItems;
 
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
+            for (let i = 0; i < printItems.length; i++) {
+                const item = printItems[i];
                 const pageIndex = Math.floor(i / cfg.perPage);
                 const posInPage = i % cfg.perPage;
                 const col = posInPage % cfg.cols;
@@ -196,7 +229,7 @@ export default function CetakQRPage() {
     };
 
     const cfg = LAYOUTS[layout];
-    const totalPages = items.length > 0 ? Math.ceil(items.length / cfg.perPage) : 0;
+    const totalPages = filteredItems.length > 0 ? Math.ceil(filteredItems.length / cfg.perPage) : 0;
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -272,8 +305,8 @@ export default function CetakQRPage() {
                                         onClick={() => setLayout(key)}
                                         disabled={loading || generating}
                                         className={`flex-1 p-4 rounded-lg border-2 text-center transition font-medium ${layout === key
-                                                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                             }`}
                                     >
                                         <div className="font-bold text-sm">{LAYOUTS[key].label}</div>
@@ -297,6 +330,49 @@ export default function CetakQRPage() {
                     </div>
                 </div>
 
+                {/* Exclude Customer */}
+                {items.length > 0 && uniqueCustomers.length > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-sm border space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2 text-gray-800 font-bold">
+                                <UserX size={20} className="text-orange-500" />
+                                <span>Exclude Customer</span>
+                                <span className="text-xs font-normal text-gray-500 ml-1">
+                                    ({excludedCustomers.size} dari {uniqueCustomers.length} di-exclude)
+                                </span>
+                            </div>
+                            <button
+                                onClick={toggleExcludeAll}
+                                className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
+                            >
+                                {excludedCustomers.size === uniqueCustomers.length ? 'Hapus Semua' : 'Exclude Semua'}
+                            </button>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto border rounded-lg divide-y divide-gray-100">
+                            {uniqueCustomers.map(name => {
+                                const isExcluded = excludedCustomers.has(name);
+                                const count = items.filter(i => i.customerName === name).length;
+                                return (
+                                    <label
+                                        key={name}
+                                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition text-sm ${isExcluded ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50 text-gray-700'
+                                            }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isExcluded}
+                                            onChange={() => toggleExclude(name)}
+                                            className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                        />
+                                        <span className={`flex-1 ${isExcluded ? 'line-through' : 'font-medium'}`}>{name}</span>
+                                        <span className="text-xs text-gray-400">{count} faktur</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 {/* Preview & Generate */}
                 {items.length > 0 && (
                     <div className="bg-white p-6 rounded-xl shadow-sm border space-y-4">
@@ -304,12 +380,12 @@ export default function CetakQRPage() {
                             <div>
                                 <h3 className="font-bold text-gray-800 text-lg">Preview</h3>
                                 <p className="text-sm text-gray-500">
-                                    {items.length} faktur • {totalPages} halaman • Ukuran: {cfg.label}
+                                    {filteredItems.length} faktur{excludedCustomers.size > 0 ? ` (${items.length - filteredItems.length} di-exclude)` : ''} • {totalPages} halaman • Ukuran: {cfg.label}
                                 </p>
                             </div>
                             <button
                                 onClick={generatePDF}
-                                disabled={generating}
+                                disabled={generating || filteredItems.length === 0}
                                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg transition active:scale-95 disabled:opacity-50"
                             >
                                 {generating ? <RefreshCw className="animate-spin" size={18} /> : <Download size={18} />}
@@ -329,7 +405,7 @@ export default function CetakQRPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {items.map((item, idx) => (
+                                    {filteredItems.map((item, idx) => (
                                         <tr key={item.id} className="hover:bg-gray-50">
                                             <td className="p-3 text-gray-400">{idx + 1}</td>
                                             <td className="p-3 font-medium text-gray-900">{item.transNo}</td>
