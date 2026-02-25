@@ -24,10 +24,30 @@ body {
 }
 
 /* Force input text to always be dark/readable */
-input, textarea, select {
-  color: #111827 !important; /* gray-900 */
+input,
+textarea,
+select {
+  color: #111827 !important;
+  /* gray-900 */
 }
 
-input::placeholder, textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  /* gray-400 */
+}
+
+/* Sidebar slide-in animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out;
 }
