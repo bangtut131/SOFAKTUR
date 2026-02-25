@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Smartphone, Plus, Settings, ClipboardList, TrendingDown } from "lucide-react";
+import { LogOut, Smartphone, Plus, Settings, ClipboardList, TrendingDown, QrCode } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -44,6 +44,13 @@ export default function DashboardHeader({ username, role }: { username: string, 
                         >
                             <ClipboardList size={16} />
                             Absensi Faktur
+                        </Link>
+                        <Link
+                            href="/cetak-qr"
+                            className="flex items-center gap-2 bg-white text-gray-700 border border-gray-200 hover:bg-purple-50 hover:text-purple-600 px-4 h-10 rounded-lg font-semibold transition shadow-sm text-sm"
+                        >
+                            <QrCode size={16} />
+                            Cetak QR
                         </Link>
                         <Link
                             href="/monitor-return"
