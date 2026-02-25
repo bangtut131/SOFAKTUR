@@ -3,8 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, QrCode, Filter, RefreshCw, Download, FileText, UserX, Check } from "lucide-react";
-import jsPDF from "jspdf";
-import QRCode from "qrcode";
 
 // Layout configs for A4 (210x297mm)
 const LAYOUTS = {
@@ -157,6 +155,13 @@ export default function CetakQRPage() {
         setGenerating(true);
 
         try {
+            // Dynamic import to avoid server-side crash (canvas dependency)
+            const [{ default: jsPDF }, QRCodeModule] = await Promise.all([
+                import('jspdf'),
+                import('qrcode')
+            ]);
+            const QRCode = QRCodeModule.default || QRCodeModule;
+
             const cfg = LAYOUTS[layout];
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
