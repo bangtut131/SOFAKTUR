@@ -179,3 +179,20 @@ model FakturAbsensiItem {
   @@index([transNo])
   @@index([returnStatus])
 }
+
+model MonitorReturn {
+  id             String   @id @default(uuid())
+  transNo        String
+  transDate      String
+  customerName   String
+  branchName     String?
+  description    String?
+  amount         Float    @default(0)
+  primeOwing     Float    @default(0)
+  statusName     String?
+  syncedAt       DateTime @default(now())
+
+  @@index([syncedAt])
+  @@index([customerName])
+  @@index([transNo])
+}

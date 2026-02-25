@@ -54,7 +54,7 @@ export const AccurateServerService = {
             url.searchParams.append('filter.primeOwing.op', 'GREATER_THAN');
             url.searchParams.append('filter.primeOwing.val', '0');
         } else if (filters.owingStatus === 'RETURN') {
-            url.searchParams.append('filter.primeOwing.op', 'LESS_EQUAL_THAN');
+            url.searchParams.append('filter.primeOwing.op', 'LESS_THAN');
             url.searchParams.append('filter.primeOwing.val', '0');
         }
 
@@ -209,7 +209,7 @@ export const AccurateServerService = {
             } else if (filters.owingStatus === 'UNPAID') {
                 invoices = invoices.filter((i: any) => i.primeOwing > 0);
             } else if (filters.owingStatus === 'RETURN') {
-                invoices = invoices.filter((i: any) => i.primeOwing <= 0);
+                invoices = invoices.filter((i: any) => i.primeOwing < 0);
             }
             console.log(`[ACCURATE SERVICE] After owingStatus filter: ${invoices.length} (removed ${beforeOwingFilter - invoices.length})`);
 
