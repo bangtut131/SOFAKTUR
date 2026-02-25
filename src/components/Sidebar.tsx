@@ -47,8 +47,8 @@ export default function Sidebar({ username, role }: { username: string; role: st
             href={item.href}
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all group ${isActive(item.href)
-                    ? 'bg-blue-50 text-blue-700 shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-blue-50 text-blue-700 shadow-sm'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
         >
             <span className={isActive(item.href) ? 'text-blue-600' : item.color}>{item.icon}</span>
@@ -61,12 +61,9 @@ export default function Sidebar({ username, role }: { username: string; role: st
         <div className="flex flex-col h-full">
             {/* Logo & App Name */}
             <div className="p-5 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                    <img src="/logo.png" alt="Logo" className="h-9 w-auto" />
-                    <div className="min-w-0">
-                        <h1 className="text-sm font-bold text-gray-800 tracking-tight leading-tight">Invoice</h1>
-                        <h1 className="text-sm font-bold text-gray-800 tracking-tight leading-tight">Stock Opname</h1>
-                    </div>
+                <div className="flex flex-col items-center gap-2">
+                    <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+                    <h1 className="text-xs font-bold text-gray-500 tracking-wide text-center">Invoice Stock Opname</h1>
                 </div>
             </div>
 
@@ -116,8 +113,8 @@ export default function Sidebar({ username, role }: { username: string; role: st
                         href="/settings"
                         onClick={() => setMobileOpen(false)}
                         className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition ${isActive('/settings')
-                                ? 'bg-gray-100 text-gray-900'
-                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                            ? 'bg-gray-100 text-gray-900'
+                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                             }`}
                     >
                         <Settings size={18} />
