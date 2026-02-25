@@ -13,7 +13,8 @@ export default function MonitorReturnPage() {
     const [filters, setFilters] = useState({
         fromDate: '',
         toDate: '',
-        branchId: ''
+        branchId: '',
+        accurateStatus: 'Unapplied' // Default: Belum Lunas
     });
 
     // Branch State
@@ -86,7 +87,7 @@ export default function MonitorReturnPage() {
                         <span>Filter Data</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                             <label className="text-xs font-bold text-gray-600 mb-1 block">Dari Tanggal</label>
                             <input
@@ -119,6 +120,18 @@ export default function MonitorReturnPage() {
                                 {branches.map(b => (
                                     <option key={b.id} value={b.id}>{b.name}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-600 mb-1 block">Status Accurate</label>
+                            <select
+                                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-medium"
+                                value={filters.accurateStatus}
+                                onChange={(e) => setFilters(prev => ({ ...prev, accurateStatus: e.target.value }))}
+                                disabled={loading}
+                            >
+                                <option value="Unapplied">Belum Lunas (Unapplied)</option>
+                                <option value="">Semua Status</option>
                             </select>
                         </div>
                     </div>
