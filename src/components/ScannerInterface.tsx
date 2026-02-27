@@ -447,7 +447,13 @@ export default function ScannerInterface({
             const value = colFilters[key].toLowerCase();
             if (value) {
                 data = data.filter((inv) => {
-                    const itemVal = String((inv as any)[key] || '').toLowerCase();
+                    let itemVal: string;
+                    if (key === 'status') {
+                        // Map raw status to displayed label: MATCHED -> 'OK', others -> 'PENDING'
+                        itemVal = inv.status === 'MATCHED' ? 'ok' : 'pending';
+                    } else {
+                        itemVal = String((inv as any)[key] || '').toLowerCase();
+                    }
                     return itemVal.includes(value);
                 });
             }
@@ -744,7 +750,17 @@ export default function ScannerInterface({
                                                 {sortConfig && sortConfig.key === col.key && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                             </div>
                                             {/* Optional: Filter Input if needed per column */}
-                                            {['status', 'transNo', 'transDate', 'customerName', 'description', 'statusName', 'existenceStatus', 'remarks'].includes(col.key) && (
+                                            {col.key === 'status' ? (
+                                                <select
+                                                    className="w-full p-1 text-[10px] border rounded font-normal"
+                                                    value={colFilters[col.key] || ''}
+                                                    onChange={(e) => handleFilterChange(col.key, e.target.value)}
+                                                >
+                                                    <option value="">Semua</option>
+                                                    <option value="ok">OK</option>
+                                                    <option value="pending">PENDING</option>
+                                                </select>
+                                            ) : ['transNo', 'transDate', 'customerName', 'description', 'statusName', 'existenceStatus', 'remarks'].includes(col.key) && (
                                                 <input
                                                     type="text"
                                                     placeholder="Filter..."
@@ -813,8 +829,8 @@ export default function ScannerInterface({
                                             <label
                                                 key={customer.name}
                                                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${excludeSelected.has(customer.name)
-                                                        ? 'bg-purple-50 border border-purple-200'
-                                                        : 'hover:bg-gray-50 border border-transparent'
+                                                    ? 'bg-purple-50 border border-purple-200'
+                                                    : 'hover:bg-gray-50 border border-transparent'
                                                     }`}
                                             >
                                                 <input
