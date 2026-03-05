@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
     ArrowLeft, Lock, CheckCircle, AlertTriangle, Download,
-    FileSpreadsheet, FileText, Plus, Trash2, ClipboardList
+    FileSpreadsheet, FileText, Plus, Trash2, ClipboardList, Unlock
 } from "lucide-react";
 import { generatePDF, generateBAFOPdf, SelisihRow, BAFOSignatories } from "@/utils/pdfGenerator";
 
@@ -36,6 +36,7 @@ export default function AdjustmentPage() {
     const [items, setItems] = useState<SoItem[]>([]);
     const [periodName, setPeriodName] = useState("");
     const [sessionStatus, setSessionStatus] = useState("OPEN");
+    const [userRole, setUserRole] = useState("");
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'ALL' | 'UNVERIFIED' | 'HILANG' | 'SALES'>('ALL');
     const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
@@ -67,6 +68,7 @@ export default function AdjustmentPage() {
                     setItems(sessionItems);
                     setPeriodName(data.session.periodName);
                     setSessionStatus(data.session.status);
+                    setUserRole(data.userRole || '');
 
                     if (data.visibleColumns && data.visibleColumns.length > 0) {
                         setVisibleColumns(data.visibleColumns);
@@ -93,6 +95,22 @@ export default function AdjustmentPage() {
         };
         fetchData();
     }, [id]);
+
+    const handleReopen = async () => {
+        if (!confirm('Yakin ingin membuka kunci SO yang sudah FINALIZED?\nStatus akan dikembalikan ke OPEN.')) return;
+        try {
+            const res = await fetch(`/api/so/sessions/${id}/reopen`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                alert('SO berhasil dibuka kembali ke status OPEN.');
+                router.push('/dashboard');
+            } else {
+                alert(data.error || 'Gagal membuka kunci SO.');
+            }
+        } catch (e) {
+            alert('Error server saat membuka kunci.');
+        }
+    };
 
     const handleLock = async () => {
         if (!confirm("Yakin ingin MENSUBMIT sessions ini untuk Approval Finance? \nData akan dikunci dari editing.")) return;
@@ -248,6 +266,16 @@ export default function AdjustmentPage() {
 
                             {sessionStatus === 'FINALIZED' && (
                                 <>
+                                    {userRole === 'ADMIN' && (
+                                        <button
+                                            onClick={handleReopen}
+                                            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg font-bold shadow-lg transition"
+                                            title="Buka kunci SO (Admin only)"
+                                        >
+                                            <Unlock size={18} />
+                                            Buka Kunci
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => window.open(`/api/so/sessions/${id}/export`, '_blank')}
                                         className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-bold shadow-lg transition"
