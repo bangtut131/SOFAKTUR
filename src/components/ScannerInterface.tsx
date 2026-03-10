@@ -444,17 +444,25 @@ export default function ScannerInterface({
 
         // 1. Column Filtering
         Object.keys(colFilters).forEach((key) => {
-            const value = colFilters[key].toLowerCase();
+            const value = colFilters[key];
             if (value) {
                 data = data.filter((inv) => {
+                    // Special: filter blank/empty values
+                    if (value === '__BLANK__') {
+                        const raw = (inv as any)[key];
+                        return !raw || String(raw).trim() === '';
+                    }
+                    if (value === '__FILLED__') {
+                        const raw = (inv as any)[key];
+                        return raw && String(raw).trim() !== '';
+                    }
                     let itemVal: string;
                     if (key === 'status') {
-                        // Map raw status to displayed label: MATCHED -> 'OK', others -> 'PENDING'
                         itemVal = inv.status === 'MATCHED' ? 'ok' : 'pending';
                     } else {
                         itemVal = String((inv as any)[key] || '').toLowerCase();
                     }
-                    return itemVal.includes(value);
+                    return itemVal.includes(value.toLowerCase());
                 });
             }
         });
@@ -760,7 +768,30 @@ export default function ScannerInterface({
                                                     <option value="ok">OK</option>
                                                     <option value="pending">PENDING</option>
                                                 </select>
-                                            ) : ['transNo', 'transDate', 'customerName', 'description', 'statusName', 'existenceStatus', 'remarks'].includes(col.key) && (
+                                            ) : col.key === 'existenceStatus' ? (
+                                                <select
+                                                    className="w-full p-1 text-[10px] border rounded font-normal"
+                                                    value={colFilters[col.key] || ''}
+                                                    onChange={(e) => handleFilterChange(col.key, e.target.value)}
+                                                >
+                                                    <option value="">Semua</option>
+                                                    <option value="__BLANK__">(Kosong)</option>
+                                                    <option value="__FILLED__">(Sudah diisi)</option>
+                                                    <option value="Ada">Ada</option>
+                                                    <option value="Hilang">Hilang</option>
+                                                    <option value="Dibawa Sales">Dibawa Sales</option>
+                                                </select>
+                                            ) : col.key === 'remarks' ? (
+                                                <select
+                                                    className="w-full p-1 text-[10px] border rounded font-normal"
+                                                    value={colFilters[col.key] || ''}
+                                                    onChange={(e) => handleFilterChange(col.key, e.target.value)}
+                                                >
+                                                    <option value="">Semua</option>
+                                                    <option value="__BLANK__">(Kosong)</option>
+                                                    <option value="__FILLED__">(Sudah diisi)</option>
+                                                </select>
+                                            ) : ['transNo', 'transDate', 'customerName', 'description', 'statusName'].includes(col.key) && (
                                                 <input
                                                     type="text"
                                                     placeholder="Filter..."
