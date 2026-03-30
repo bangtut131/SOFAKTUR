@@ -90,5 +90,47 @@ export const WahaService = {
             console.error("WAHA Send Error:", error);
             return { success: false, error: error.message };
         }
+    },
+
+    async checkContacts(phones: string[]): Promise<{ phone: string; exists: boolean | null }[]> {
+        const config = await this.getConfig();
+        const results: { phone: string; exists: boolean | null }[] = [];
+
+        for (const phone of phones) {
+            let formattedPhone = phone.replace(/\D/g, '');
+            if (formattedPhone.startsWith('0')) {
+                formattedPhone = '62' + formattedPhone.slice(1);
+            }
+
+            try {
+                const headers: any = { 'Content-Type': 'application/json' };
+                if (config.apiKey) headers['X-Api-Key'] = config.apiKey;
+
+                const res = await fetch(`${config.baseUrl}/api/contacts/check-exists`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        session: config.sessionId,
+                        phone: formattedPhone,
+                    }),
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    results.push({ phone, exists: data.result?.exists ?? data.exists ?? null });
+                } else {
+                    // Endpoint might not exist — fallback
+                    results.push({ phone, exists: null });
+                }
+            } catch (error) {
+                // WAHA doesn't support this endpoint or connection failed
+                results.push({ phone, exists: null });
+            }
+
+            // Small delay between checks to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        return results;
     }
 };
