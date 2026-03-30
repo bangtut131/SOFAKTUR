@@ -129,8 +129,7 @@ export default function PiutangPage() {
     }, []);
 
     const handleBroadcast = async () => {
-        if (!confirm("Kirim broadcast ke semua pelanggan yang memiliki piutang?")) return;
-        router.push('/piutang/settings');
+        router.push('/broadcast');
     };
 
     return (
