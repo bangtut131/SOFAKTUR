@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit, Clock, Calendar, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Users, Shield, Key, Save, Trash2, Plus, Edit, Clock, Calendar, FileText, AlertCircle, CheckCircle, Database, Upload, Download, RefreshCw } from "lucide-react";
 
 interface User {
     id: string;
@@ -150,6 +150,13 @@ export default function SettingsPage() {
     // Logs State
     const [logs, setLogs] = useState<any[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
+
+    // Backup / Restore State
+    const [backupLoading, setBackupLoading] = useState(false);
+    const [restoreLoading, setRestoreLoading] = useState(false);
+    const [restoreFile, setRestoreFile] = useState<any>(null);
+    const [restorePreview, setRestorePreview] = useState<any>(null);
+    const [restoreResult, setRestoreResult] = useState<any>(null);
 
     useEffect(() => {
         // Check role
@@ -349,6 +356,14 @@ export default function SettingsPage() {
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition ${activeTab === 'LOGS' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
                             >
                                 <FileText size={18} /> System Logs
+                            </button>
+                        )}
+                        {isAdmin && (
+                            <button
+                                onClick={() => setActiveTab('BACKUP')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition ${activeTab === 'BACKUP' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                <Database size={18} /> Backup & Restore
                             </button>
                         )}
                     </nav>
@@ -661,6 +676,153 @@ export default function SettingsPage() {
                                     </table>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* BACKUP TAB */}
+                    {activeTab === 'BACKUP' && isAdmin && (
+                        <div className="space-y-6">
+                            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <Database size={20} /> Backup & Restore Database
+                            </h2>
+
+                            {/* BACKUP Section */}
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                                <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2">
+                                    <Download size={16} /> Backup Data
+                                </h3>
+                                <p className="text-sm text-green-700 mb-4">
+                                    Download seluruh data database dalam format JSON. File ini bisa digunakan untuk restore jika terjadi masalah.
+                                </p>
+                                <button
+                                    disabled={backupLoading}
+                                    onClick={async () => {
+                                        setBackupLoading(true);
+                                        try {
+                                            const res = await fetch('/api/admin/backup');
+                                            if (!res.ok) { alert('Gagal backup'); return; }
+                                            const blob = await res.blob();
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                                            a.download = `SOFAKTUR_BACKUP_${dateStr}.json`;
+                                            a.click();
+                                            URL.revokeObjectURL(url);
+                                        } catch (e) {
+                                            alert('Error download backup');
+                                        } finally {
+                                            setBackupLoading(false);
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-bold shadow transition"
+                                >
+                                    {backupLoading ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
+                                    {backupLoading ? 'Downloading...' : 'Download Backup'}
+                                </button>
+                            </div>
+
+                            {/* RESTORE Section */}
+                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
+                                <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
+                                    <Upload size={16} /> Restore Data
+                                </h3>
+                                <p className="text-sm text-orange-700 mb-4">
+                                    Upload file backup JSON untuk mengembalikan data. <span className="font-bold text-red-700">PERHATIAN: data saat ini akan DITIMPA oleh data dari file backup!</span>
+                                </p>
+
+                                <div className="mb-4">
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white p-2"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            setRestoreResult(null);
+                                            try {
+                                                const text = await file.text();
+                                                const json = JSON.parse(text);
+                                                setRestoreFile(json);
+                                                setRestorePreview(json.counts || {});
+                                            } catch (err) {
+                                                alert('File tidak valid. Pastikan file adalah backup JSON yang benar.');
+                                                setRestoreFile(null);
+                                                setRestorePreview(null);
+                                            }
+                                        }}
+                                    />
+                                </div>
+
+                                {restorePreview && (
+                                    <div className="bg-white border rounded-lg p-4 mb-4">
+                                        <h4 className="text-sm font-bold text-gray-700 mb-2">Preview File Backup:</h4>
+                                        {restoreFile?.exportedAt && (
+                                            <p className="text-xs text-gray-500 mb-3">
+                                                Dibuat: {new Date(restoreFile.exportedAt).toLocaleString('id-ID')}
+                                            </p>
+                                        )}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                            {Object.entries(restorePreview).map(([key, count]) => (
+                                                <div key={key} className="bg-gray-50 rounded p-2 border">
+                                                    <div className="text-[10px] uppercase font-bold text-gray-500">{key}</div>
+                                                    <div className="text-lg font-bold text-gray-800">{String(count)}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {restoreFile && (
+                                    <button
+                                        disabled={restoreLoading}
+                                        onClick={async () => {
+                                            if (!confirm('PERINGATAN!\n\nAnda akan MENIMPA seluruh data database dengan data dari file backup.\n\nProses ini TIDAK BISA dibatalkan.\n\nLanjutkan?')) return;
+                                            if (!confirm('Konfirmasi TERAKHIR: Yakin restore data?')) return;
+                                            setRestoreLoading(true);
+                                            setRestoreResult(null);
+                                            try {
+                                                const res = await fetch('/api/admin/backup/restore', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ data: restoreFile.data }),
+                                                });
+                                                const result = await res.json();
+                                                if (result.success) {
+                                                    setRestoreResult(result);
+                                                    alert('Restore berhasil!');
+                                                } else {
+                                                    alert('Gagal restore: ' + (result.error || 'Unknown error'));
+                                                }
+                                            } catch (e) {
+                                                alert('Error restore data');
+                                            } finally {
+                                                setRestoreLoading(false);
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg font-bold shadow transition"
+                                    >
+                                        {restoreLoading ? <RefreshCw size={16} className="animate-spin" /> : <Upload size={16} />}
+                                        {restoreLoading ? 'Restoring...' : 'Restore Data dari File'}
+                                    </button>
+                                )}
+
+                                {restoreResult?.success && (
+                                    <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                                        <h4 className="text-sm font-bold text-green-700 mb-2 flex items-center gap-1">
+                                            <CheckCircle size={14} /> Restore Berhasil!
+                                        </h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                            {Object.entries(restoreResult.results || {}).map(([key, count]) => (
+                                                <div key={key} className="text-xs">
+                                                    <span className="font-bold text-gray-700">{key}:</span>{' '}
+                                                    <span className="text-green-700 font-bold">{String(count)} records</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
