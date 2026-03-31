@@ -1,29 +1,25 @@
 // WhatsApp Device Manager using @whiskeysockets/baileys
 // Lightweight, no Chromium/Puppeteer needed — works on Railway
 
-import makeWASocket, {
-    DisconnectReason,
-    useMultiFileAuthState,
-    makeCacheableSignalKeyStore,
-    fetchLatestBaileysVersion,
-} from '@whiskeysockets/baileys';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Suppress pino logger noise
-const logger = {
-    level: 'silent',
-    info: () => {},
-    error: () => {},
-    warn: () => {},
-    debug: () => {},
-    trace: () => {},
-    child: () => logger,
-    fatal: () => {},
-} as any;
+// Lazy-load baileys to prevent server crash if import fails
+let baileysModule: any = null;
+async function loadBaileys() {
+    if (!baileysModule) {
+        try {
+            baileysModule = await import('@whiskeysockets/baileys');
+        } catch (e) {
+            console.error('[WaDevice] Failed to load baileys:', e);
+            throw new Error('Baileys module not available');
+        }
+    }
+    return baileysModule;
+}
 
 interface DeviceSession {
-    socket: ReturnType<typeof makeWASocket> | null;
+    socket: any;
     id: string;          // DB device ID
     sessionId: string;   // unique session name
     status: 'INITIALIZING' | 'SCAN_QR' | 'CONNECTED' | 'DISCONNECTED';
@@ -85,28 +81,35 @@ class WaDeviceManager {
     }
 
     private async connectDevice(session: DeviceSession): Promise<void> {
+        const baileys = await loadBaileys();
+        const makeWASocket = baileys.default || baileys.makeWASocket;
+        const { useMultiFileAuthState, DisconnectReason } = baileys;
+
         const authDir = this.getAuthDir(session.sessionId);
         const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
-        const { version } = await fetchLatestBaileysVersion();
-
         const socket = makeWASocket({
-            version,
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, logger),
-            },
-            logger,
+            auth: state,
             printQRInTerminal: false,
             browser: ['GAS Broadcast', 'Chrome', '4.0.0'],
             generateHighQualityLinkPreview: false,
             syncFullHistory: false,
+            logger: {
+                level: 'silent',
+                info: () => {},
+                error: () => {},
+                warn: () => {},
+                debug: () => {},
+                trace: () => {},
+                child: function() { return this; },
+                fatal: () => {},
+            },
         });
 
         session.socket = socket;
 
         // Handle connection updates
-        socket.ev.on('connection.update', (update) => {
+        socket.ev.on('connection.update', (update: any) => {
             const { connection, lastDisconnect, qr } = update;
 
             if (qr) {
@@ -119,7 +122,7 @@ class WaDeviceManager {
                 const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
                 console.log(`[WaDevice] Connection closed for ${session.sessionId}, reason: ${statusCode}`);
 
-                if (statusCode === DisconnectReason.loggedOut) {
+                if (statusCode === DisconnectReason?.loggedOut) {
                     // Logged out — clean up auth and mark as disconnected
                     session.status = 'DISCONNECTED';
                     session.qr = null;
@@ -211,7 +214,8 @@ class WaDeviceManager {
         const device = this.devices.get(sessionId);
         if (device) {
             try {
-                device.socket?.end(undefined);
+                device.socket?.end?.(undefined);
+                device.socket?.ws?.close?.();
             } catch (e) {
                 console.error(`[WaDevice] Destroy error:`, e);
             }
