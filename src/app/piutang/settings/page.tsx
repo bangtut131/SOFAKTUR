@@ -66,6 +66,7 @@ export default function PiutangSettingsPage() {
     const [newDeviceName, setNewDeviceName] = useState('');
     const [addingDevice, setAddingDevice] = useState(false);
     const [qrData, setQrData] = useState<{ [key: string]: string | null }>({});
+    const [qrMessage, setQrMessage] = useState<{ [key: string]: string | null }>({});
     const [loadingQr, setLoadingQr] = useState<{ [key: string]: boolean }>({});
     const [checkingStatus, setCheckingStatus] = useState<{ [key: string]: boolean }>({});
 
@@ -138,11 +139,19 @@ export default function PiutangSettingsPage() {
 
     const handleFetchQr = async (id: string) => {
         setLoadingQr(prev => ({ ...prev, [id]: true }));
+        setQrMessage(prev => ({ ...prev, [id]: null }));
         try {
             const res = await fetch(`/api/broadcast/devices/${id}/qr`);
             const data = await res.json();
-            setQrData(prev => ({ ...prev, [id]: data.qr || null }));
-        } catch (e) { console.error('QR fetch failed', e); }
+            if (data.qr) {
+                setQrData(prev => ({ ...prev, [id]: data.qr }));
+            } else {
+                setQrData(prev => ({ ...prev, [id]: null }));
+                setQrMessage(prev => ({ ...prev, [id]: data.message || data.error || 'QR tidak tersedia' }));
+            }
+        } catch (e: any) {
+            setQrMessage(prev => ({ ...prev, [id]: 'Error: ' + e.message }));
+        }
         finally { setLoadingQr(prev => ({ ...prev, [id]: false })); }
     };
 
@@ -508,9 +517,13 @@ export default function PiutangSettingsPage() {
                                             <p className="text-xs text-gray-500 font-bold mb-2">Scan QR Code ini dari WhatsApp Anda:</p>
                                             <div className="inline-block bg-white p-4 rounded-lg border shadow-sm">
                                                 <img
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData[device.id]!)}`}
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData[device.id]!)}`}
                                                     alt="QR Code"
-                                                    className="w-48 h-48"
+                                                    className="w-64 h-64"
+                                                    onError={(e) => {
+                                                        // Fallback: show raw QR string if image fails
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
                                                 />
                                             </div>
                                             <p className="text-[10px] text-gray-400 mt-2">Buka WhatsApp → Linked Devices → Link a Device → Scan QR</p>
@@ -519,6 +532,21 @@ export default function PiutangSettingsPage() {
                                                 className="mt-2 text-xs text-blue-600 font-bold hover:underline"
                                             >
                                                 Refresh QR / Cek Status
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* QR Message (info/error) */}
+                                    {!qrData[device.id] && qrMessage[device.id] && !loadingQr[device.id] && (
+                                        <div className="mt-3 pt-3 border-t text-center">
+                                            <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                                                {qrMessage[device.id]}
+                                            </p>
+                                            <button
+                                                onClick={() => handleFetchQr(device.id)}
+                                                className="mt-2 text-xs text-blue-600 font-bold hover:underline"
+                                            >
+                                                Coba Lagi
                                             </button>
                                         </div>
                                     )}

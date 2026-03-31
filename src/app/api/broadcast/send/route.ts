@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { WahaService } from '@/services/waha';
+import { waDeviceManager } from '@/services/wa-device-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +74,13 @@ export async function POST(req: NextRequest) {
                     }
 
                     try {
-                        const result = await WahaService.sendText(phone, message, sessionOverride);
+                        // Use wa-device-manager if device sessions provided, otherwise WAHA
+                        let result: { success: boolean; error?: string };
+                        if (sessions.length > 0) {
+                            result = await waDeviceManager.sendMessage(sessionOverride!, phone, message);
+                        } else {
+                            result = await WahaService.sendText(phone, message);
+                        }
 
                         if (result.success) {
                             sentCount++;

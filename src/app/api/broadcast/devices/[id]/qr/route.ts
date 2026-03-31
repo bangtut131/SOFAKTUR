@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { WahaService } from '@/services/waha';
+import { waDeviceManager } from '@/services/wa-device-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,30 +8,63 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         const device = await prisma.waDevice.findUnique({ where: { id: params.id } });
-        if (!device) return NextResponse.json({ error: 'Device not found' }, { status: 404 });
+        if (!device) return NextResponse.json({ error: 'Device not found', qr: null }, { status: 404 });
 
-        const config = await WahaService.getConfig();
-        const headers: any = {};
-        if (config.apiKey) headers['X-Api-Key'] = config.apiKey;
-
-        // Get QR code as base64
-        const qrRes = await fetch(`${config.baseUrl}/api/${device.sessionId}/auth/qr?format=raw`, {
-            headers,
-        });
-
-        if (!qrRes.ok) {
-            // Maybe already authenticated or session issue
-            const errText = await qrRes.text();
-            return NextResponse.json({ error: `QR not available: ${errText}`, qr: null });
+        // Check if device is already connected
+        const live = waDeviceManager.getStatus(device.sessionId);
+        if (live.status === 'CONNECTED') {
+            return NextResponse.json({
+                success: true,
+                qr: null,
+                message: 'Device sudah terhubung, tidak perlu scan QR lagi.',
+            });
         }
 
-        const qrData = await qrRes.json();
+        // Check if manager has the device running
+        const existingDevice = waDeviceManager.getDevice(device.sessionId);
+        if (!existingDevice) {
+            // Re-initialize the device (might have been lost on server restart)
+            console.log(`[QR] Device not in manager, re-initializing: ${device.sessionId}`);
+            waDeviceManager.initDevice(device.id, device.sessionId, device.name).catch(e => {
+                console.error('[QR] Re-init error:', e);
+            });
+            
+            // Wait a bit for QR to be generated
+            await new Promise(r => setTimeout(r, 5000));
+        }
+
+        // Get QR from manager
+        const qr = waDeviceManager.getQr(device.sessionId);
+
+        if (qr) {
+            return NextResponse.json({ success: true, qr });
+        }
+
+        // Check status again
+        const status = waDeviceManager.getStatus(device.sessionId);
+        if (status.status === 'CONNECTED') {
+            return NextResponse.json({
+                success: true,
+                qr: null,
+                message: 'Device sudah terhubung!',
+            });
+        }
+
+        if (status.status === 'INITIALIZING') {
+            return NextResponse.json({
+                success: false,
+                qr: null,
+                message: 'Device sedang inisialisasi, coba lagi dalam beberapa detik...',
+            });
+        }
 
         return NextResponse.json({
-            success: true,
-            qr: qrData.value || qrData.data || qrData,
+            success: false,
+            qr: null,
+            message: 'QR Code belum tersedia. Klik "Tampilkan QR" lagi.',
         });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('[QR] Error:', error);
+        return NextResponse.json({ error: error.message, qr: null }, { status: 500 });
     }
 }
