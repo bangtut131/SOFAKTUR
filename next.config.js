@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
+    serverExternalPackages: ['@whiskeysockets/baileys', 'link-preview-js'],
     eslint: {
         // Warning: This allows production builds to successfully complete even if
         // your project has ESLint errors.

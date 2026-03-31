@@ -1,16 +1,36 @@
-// Standalone WhatsApp Device Manager using whatsapp-web.js
-// Each device = a separate whatsapp-web.js Client with its own session
+// WhatsApp Device Manager using @whiskeysockets/baileys
+// Lightweight, no Chromium/Puppeteer needed — works on Railway
 
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import makeWASocket, {
+    DisconnectReason,
+    useMultiFileAuthState,
+    makeCacheableSignalKeyStore,
+    fetchLatestBaileysVersion,
+} from '@whiskeysockets/baileys';
+import * as path from 'path';
+import * as fs from 'fs';
+
+// Suppress pino logger noise
+const logger = {
+    level: 'silent',
+    info: () => {},
+    error: () => {},
+    warn: () => {},
+    debug: () => {},
+    trace: () => {},
+    child: () => logger,
+    fatal: () => {},
+} as any;
 
 interface DeviceSession {
-    client: Client;
+    socket: ReturnType<typeof makeWASocket> | null;
     id: string;          // DB device ID
     sessionId: string;   // unique session name
     status: 'INITIALIZING' | 'SCAN_QR' | 'CONNECTED' | 'DISCONNECTED';
     qr: string | null;
     phone: string | null;
     name: string;
+    retryCount: number;
 }
 
 class WaDeviceManager {
@@ -24,7 +44,15 @@ class WaDeviceManager {
         return WaDeviceManager.instance;
     }
 
-    // Initialize a new device client
+    private getAuthDir(sessionId: string): string {
+        const dir = path.join(process.cwd(), '.wa-sessions', sessionId);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        return dir;
+    }
+
+    // Initialize a new device
     async initDevice(deviceId: string, sessionId: string, name: string): Promise<DeviceSession> {
         // If already exists, return it
         if (this.devices.has(sessionId)) {
@@ -33,80 +61,107 @@ class WaDeviceManager {
 
         console.log(`[WaDevice] Initializing device: ${sessionId} (${name})`);
 
-        const client = new Client({
-            authStrategy: new LocalAuth({ clientId: sessionId }),
-            puppeteer: {
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--disable-gpu',
-                ],
-            },
-        });
-
         const session: DeviceSession = {
-            client,
+            socket: null,
             id: deviceId,
             sessionId,
             status: 'INITIALIZING',
             qr: null,
             phone: null,
             name,
+            retryCount: 0,
         };
 
         this.devices.set(sessionId, session);
 
-        // QR Event
-        client.on('qr', (qr: string) => {
-            console.log(`[WaDevice] QR received for ${sessionId}`);
-            session.qr = qr;
-            session.status = 'SCAN_QR';
-        });
-
-        // Ready Event
-        client.on('ready', async () => {
-            console.log(`[WaDevice] Device ready: ${sessionId}`);
-            session.status = 'CONNECTED';
-            session.qr = null;
-
-            try {
-                const info = client.info;
-                if (info?.wid?._serialized) {
-                    session.phone = info.wid._serialized.replace('@c.us', '');
-                }
-            } catch (e) {
-                console.error('[WaDevice] Error getting phone info:', e);
-            }
-        });
-
-        // Auth failure
-        client.on('auth_failure', (msg: string) => {
-            console.error(`[WaDevice] Auth failure for ${sessionId}:`, msg);
-            session.status = 'DISCONNECTED';
-            session.qr = null;
-        });
-
-        // Disconnected
-        client.on('disconnected', (reason: string) => {
-            console.log(`[WaDevice] Disconnected ${sessionId}:`, reason);
-            session.status = 'DISCONNECTED';
-            session.qr = null;
-        });
-
-        // Initialize
         try {
-            await client.initialize();
+            await this.connectDevice(session);
         } catch (e) {
             console.error(`[WaDevice] Failed to initialize ${sessionId}:`, e);
             session.status = 'DISCONNECTED';
         }
 
         return session;
+    }
+
+    private async connectDevice(session: DeviceSession): Promise<void> {
+        const authDir = this.getAuthDir(session.sessionId);
+        const { state, saveCreds } = await useMultiFileAuthState(authDir);
+
+        const { version } = await fetchLatestBaileysVersion();
+
+        const socket = makeWASocket({
+            version,
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, logger),
+            },
+            logger,
+            printQRInTerminal: false,
+            browser: ['GAS Broadcast', 'Chrome', '4.0.0'],
+            generateHighQualityLinkPreview: false,
+            syncFullHistory: false,
+        });
+
+        session.socket = socket;
+
+        // Handle connection updates
+        socket.ev.on('connection.update', (update) => {
+            const { connection, lastDisconnect, qr } = update;
+
+            if (qr) {
+                console.log(`[WaDevice] QR received for ${session.sessionId}`);
+                session.qr = qr;
+                session.status = 'SCAN_QR';
+            }
+
+            if (connection === 'close') {
+                const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+                console.log(`[WaDevice] Connection closed for ${session.sessionId}, reason: ${statusCode}`);
+
+                if (statusCode === DisconnectReason.loggedOut) {
+                    // Logged out — clean up auth and mark as disconnected
+                    session.status = 'DISCONNECTED';
+                    session.qr = null;
+                    session.phone = null;
+                    session.socket = null;
+                    try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
+                } else if (session.retryCount < 5) {
+                    // Reconnect on other errors
+                    session.retryCount++;
+                    session.status = 'INITIALIZING';
+                    console.log(`[WaDevice] Reconnecting ${session.sessionId} (attempt ${session.retryCount})...`);
+                    setTimeout(() => this.connectDevice(session).catch(() => {
+                        session.status = 'DISCONNECTED';
+                    }), 3000);
+                } else {
+                    session.status = 'DISCONNECTED';
+                    session.socket = null;
+                    console.log(`[WaDevice] Max retries reached for ${session.sessionId}`);
+                }
+            }
+
+            if (connection === 'open') {
+                console.log(`[WaDevice] Device connected: ${session.sessionId}`);
+                session.status = 'CONNECTED';
+                session.qr = null;
+                session.retryCount = 0;
+
+                // Get phone number from socket user
+                try {
+                    const user = socket.user;
+                    if (user?.id) {
+                        // Baileys format: 628xxx:xx@s.whatsapp.net
+                        session.phone = user.id.split(':')[0].split('@')[0];
+                    }
+                } catch (e) {
+                    console.error('[WaDevice] Error getting phone info:', e);
+                }
+            }
+        });
+
+        // Save credentials on update
+        socket.ev.on('creds.update', saveCreds);
     }
 
     // Get device session
@@ -131,19 +186,19 @@ class WaDeviceManager {
     async sendMessage(sessionId: string, phone: string, message: string): Promise<{ success: boolean; error?: string }> {
         const device = this.devices.get(sessionId);
         if (!device) return { success: false, error: 'Device not found' };
-        if (device.status !== 'CONNECTED') return { success: false, error: `Device not connected (${device.status})` };
+        if (device.status !== 'CONNECTED' || !device.socket) return { success: false, error: `Device not connected (${device.status})` };
 
         try {
-            // Format phone number
+            // Format phone number for Baileys (uses @s.whatsapp.net)
             let chatId = phone.replace(/\D/g, '');
             if (chatId.startsWith('0')) {
                 chatId = '62' + chatId.slice(1);
             }
             if (!chatId.includes('@')) {
-                chatId = chatId + '@c.us';
+                chatId = chatId + '@s.whatsapp.net';
             }
 
-            await device.client.sendMessage(chatId, message);
+            await device.socket.sendMessage(chatId, { text: message });
             return { success: true };
         } catch (e: any) {
             console.error(`[WaDevice] Send error on ${sessionId}:`, e);
@@ -156,11 +211,16 @@ class WaDeviceManager {
         const device = this.devices.get(sessionId);
         if (device) {
             try {
-                await device.client.destroy();
+                device.socket?.end(undefined);
             } catch (e) {
                 console.error(`[WaDevice] Destroy error:`, e);
             }
+            device.socket = null;
             this.devices.delete(sessionId);
+
+            // Clean up auth files
+            const authDir = this.getAuthDir(sessionId);
+            try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
         }
     }
 
