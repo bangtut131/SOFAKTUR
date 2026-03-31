@@ -5,9 +5,13 @@ import { waDeviceManager } from '@/services/wa-device-manager';
 export const dynamic = 'force-dynamic';
 
 // GET: Get QR code for a device
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const device = await prisma.waDevice.findUnique({ where: { id: params.id } });
+        const resolvedParams = await params;
+        // Fallback: extract id from URL if params doesn't resolve properly
+        const id = resolvedParams?.id || req.nextUrl.pathname.split('/devices/')[1]?.split('/')[0];
+        if (!id) return NextResponse.json({ error: 'Device ID tidak valid', qr: null }, { status: 400 });
+        const device = await prisma.waDevice.findUnique({ where: { id } });
         if (!device) return NextResponse.json({ error: 'Device not found', qr: null }, { status: 404 });
 
         // Check if device is already connected
@@ -65,6 +69,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         });
     } catch (error: any) {
         console.error('[QR] Error:', error);
-        return NextResponse.json({ error: error.message, qr: null }, { status: 500 });
+        return NextResponse.json({ error: 'Gagal memuat QR Code. Silakan coba lagi.', qr: null }, { status: 500 });
     }
 }
