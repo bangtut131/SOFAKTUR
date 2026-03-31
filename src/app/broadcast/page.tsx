@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
     ArrowLeft, Send, Users, FileText, Radio, History,
     CheckCircle, XCircle, AlertCircle, RefreshCw,
-    Plus, Trash2, Search, Phone, Check, X, Pause, Play
+    Plus, Trash2, Search, Phone, Check, X, Pause, Play, Smartphone
 } from "lucide-react";
 
 interface Recipient {
@@ -80,10 +80,15 @@ export default function BroadcastPage() {
     const [historyStats, setHistoryStats] = useState<any>({});
     const [loadingHistory, setLoadingHistory] = useState(false);
 
-    // Load recipients on mount
+    // Device State
+    const [devices, setDevices] = useState<any[]>([]);
+    const [selectedDevices, setSelectedDevices] = useState<string[]>([]); // session IDs
+    const [useWahaDefault, setUseWahaDefault] = useState(true);
+
     useEffect(() => {
         fetchRecipients();
         loadTemplate();
+        fetchDevices();
     }, []);
 
     useEffect(() => {
@@ -139,6 +144,20 @@ export default function BroadcastPage() {
         } finally {
             setLoadingHistory(false);
         }
+    };
+
+    const fetchDevices = async () => {
+        try {
+            const res = await fetch('/api/broadcast/devices');
+            const data = await res.json();
+            if (data.success) setDevices(data.devices || []);
+        } catch (e) { console.error('Failed to fetch devices', e); }
+    };
+
+    const toggleDeviceSelect = (sessionId: string) => {
+        setSelectedDevices(prev =>
+            prev.includes(sessionId) ? prev.filter(s => s !== sessionId) : [...prev, sessionId]
+        );
     };
 
     // Check WA Contacts
@@ -264,6 +283,7 @@ export default function BroadcastPage() {
                     recipients: toSend,
                     template,
                     delay: delaySeconds * 1000,
+                    deviceSessionIds: useWahaDefault ? [] : selectedDevices,
                 }),
                 signal: controller.signal,
             });
@@ -636,6 +656,51 @@ export default function BroadcastPage() {
                                         </button>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Device Selection */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                    <Smartphone size={16} className="text-blue-600" /> Pilih Device Pengirim
+                                </h3>
+
+                                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer mb-2 ${useWahaDefault ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                                    <input type="radio" checked={useWahaDefault} onChange={() => { setUseWahaDefault(true); setSelectedDevices([]); }} className="w-4 h-4" />
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-sm">WAHA Default</div>
+                                        <div className="text-xs text-gray-500">Gunakan konfigurasi WAHA yang ada di Settings</div>
+                                    </div>
+                                </label>
+
+                                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer mb-3 ${!useWahaDefault ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                                    <input type="radio" checked={!useWahaDefault} onChange={() => setUseWahaDefault(false)} className="w-4 h-4" />
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-sm">Device Terdaftar</div>
+                                        <div className="text-xs text-gray-500">Pilih satu atau lebih device (round-robin jika lebih dari satu)</div>
+                                    </div>
+                                </label>
+
+                                {!useWahaDefault && (
+                                    <div className="space-y-2 pl-7">
+                                        {devices.length === 0 ? (
+                                            <p className="text-xs text-gray-400 italic">Belum ada device. Tambahkan di Settings Piutang.</p>
+                                        ) : devices.map(d => (
+                                            <label key={d.id} className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer ${selectedDevices.includes(d.sessionId) ? 'border-blue-300 bg-blue-50/50' : 'border-gray-100 hover:bg-gray-50'} ${d.status !== 'CONNECTED' ? 'opacity-50' : ''}`}>
+                                                <input type="checkbox" checked={selectedDevices.includes(d.sessionId)} onChange={() => toggleDeviceSelect(d.sessionId)} disabled={d.status !== 'CONNECTED'} className="w-4 h-4" />
+                                                <div className={`w-2 h-2 rounded-full ${d.status === 'CONNECTED' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                <div>
+                                                    <div className="font-bold text-gray-800 text-xs">{d.name}</div>
+                                                    <div className="text-[10px] text-gray-500">{d.phone || 'Belum terhubung'} — {d.status}</div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                        {selectedDevices.length > 1 && (
+                                            <p className="text-[10px] text-blue-600 font-bold mt-1">
+                                                📡 Mode Round-Robin: pesan akan didistribusikan bergantian ke {selectedDevices.length} device
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Progress */}

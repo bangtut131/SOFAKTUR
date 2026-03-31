@@ -180,6 +180,17 @@ model FakturAbsensiItem {
   @@index([returnStatus])
 }
 
+model WaDevice {
+  id            String   @id @default(uuid())
+  name          String   // Display name e.g. "WA Collector Andi"
+  sessionId     String   @unique // WAHA session ID
+  phone         String?  // Phone number once connected
+  status        String   @default("DISCONNECTED") // CONNECTED, DISCONNECTED, SCAN_QR
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model MonitorReturn {
   id             String   @id @default(uuid())
   transNo        String

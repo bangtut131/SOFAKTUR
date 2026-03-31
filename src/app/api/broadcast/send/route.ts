@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
-        const { recipients, template, delay = 5000 } = await req.json();
+        const { recipients, template, delay = 5000, deviceSessionIds = [] } = await req.json();
 
         if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
             return new Response(JSON.stringify({ error: 'recipients required' }), { status: 400 });
@@ -29,10 +29,16 @@ export async function POST(req: NextRequest) {
                 let failCount = 0;
                 const total = recipients.length;
 
-                send({ type: 'START', total });
+                // Device session IDs for round-robin
+                const sessions: string[] = deviceSessionIds.length > 0 ? deviceSessionIds : [];
+
+                send({ type: 'START', total, devices: sessions.length || 1 });
 
                 for (let i = 0; i < recipients.length; i++) {
                     const r = recipients[i];
+
+                    // Round-robin device selection
+                    const sessionOverride = sessions.length > 0 ? sessions[i % sessions.length] : undefined;
 
                     // Build message from template
                     const totalOwing = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.totalOwing || 0);
@@ -67,7 +73,7 @@ export async function POST(req: NextRequest) {
                     }
 
                     try {
-                        const result = await WahaService.sendText(phone, message);
+                        const result = await WahaService.sendText(phone, message, sessionOverride);
 
                         if (result.success) {
                             sentCount++;

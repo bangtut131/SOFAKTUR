@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Save, Plus, Trash, Key } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash, Key, Smartphone, RefreshCw, QrCode, Wifi, WifiOff, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // --- Helper Functions for Cron Parsing/Generation ---
@@ -61,6 +61,14 @@ export default function PiutangSettingsPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
     const [testMessageTemplate, setTestMessageTemplate] = useState("Halo {customerName},\n\nAnda memiliki tagihan sebesar {totalOwing}. Mohon segera dilunasi.\n\nDetail:\n{invoiceList}\n\nTerima kasih.");
 
+    // Device Management State
+    const [devices, setDevices] = useState<any[]>([]);
+    const [newDeviceName, setNewDeviceName] = useState('');
+    const [addingDevice, setAddingDevice] = useState(false);
+    const [qrData, setQrData] = useState<{ [key: string]: string | null }>({});
+    const [loadingQr, setLoadingQr] = useState<{ [key: string]: boolean }>({});
+    const [checkingStatus, setCheckingStatus] = useState<{ [key: string]: boolean }>({});
+
     useEffect(() => {
         fetch('/api/piutang/settings')
             .then(res => res.json())
@@ -85,7 +93,70 @@ export default function PiutangSettingsPage() {
             .then(data => {
                 if (data.success) setBranches(data.branches || []);
             });
+
+        // Fetch devices
+        fetchDevices();
     }, []);
+
+    const fetchDevices = async () => {
+        try {
+            const res = await fetch('/api/broadcast/devices');
+            const data = await res.json();
+            if (data.success) setDevices(data.devices || []);
+        } catch (e) { console.error('Failed to fetch devices', e); }
+    };
+
+    const handleAddDevice = async () => {
+        if (!newDeviceName.trim()) return alert('Masukkan nama device');
+        setAddingDevice(true);
+        try {
+            const res = await fetch('/api/broadcast/devices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newDeviceName.trim() }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setNewDeviceName('');
+                await fetchDevices();
+                // Auto-fetch QR for new device
+                if (data.device?.id) handleFetchQr(data.device.id);
+            } else {
+                alert('Error: ' + (data.error || 'Unknown'));
+            }
+        } catch (e: any) { alert('Error: ' + e.message); }
+        finally { setAddingDevice(false); }
+    };
+
+    const handleDeleteDevice = async (id: string) => {
+        if (!confirm('Yakin hapus device ini?')) return;
+        try {
+            await fetch(`/api/broadcast/devices/${id}`, { method: 'DELETE' });
+            await fetchDevices();
+        } catch (e: any) { alert('Error: ' + e.message); }
+    };
+
+    const handleFetchQr = async (id: string) => {
+        setLoadingQr(prev => ({ ...prev, [id]: true }));
+        try {
+            const res = await fetch(`/api/broadcast/devices/${id}/qr`);
+            const data = await res.json();
+            setQrData(prev => ({ ...prev, [id]: data.qr || null }));
+        } catch (e) { console.error('QR fetch failed', e); }
+        finally { setLoadingQr(prev => ({ ...prev, [id]: false })); }
+    };
+
+    const handleCheckStatus = async (id: string) => {
+        setCheckingStatus(prev => ({ ...prev, [id]: true }));
+        try {
+            const res = await fetch(`/api/broadcast/devices/${id}/status`);
+            const data = await res.json();
+            if (data.success) {
+                setDevices(prev => prev.map(d => d.id === id ? { ...d, status: data.status, phone: data.phone || d.phone } : d));
+            }
+        } catch (e) { console.error('Status check failed', e); }
+        finally { setCheckingStatus(prev => ({ ...prev, [id]: false })); }
+    };
 
     const handleSaveWaha = async () => {
         try {
@@ -344,6 +415,124 @@ export default function PiutangSettingsPage() {
                             <Save size={16} /> Simpan Config
                         </button>
                     </div>
+                </div>
+
+                {/* === Device Management Section === */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-blue-100 mb-6 space-y-4">
+                    <h2 className="text-lg font-bold text-gray-700 border-b pb-2 flex items-center gap-2">
+                        <Smartphone size={18} className="text-blue-600" /> Device Pengirim WA
+                    </h2>
+                    <p className="text-xs text-gray-500">Daftarkan nomor WhatsApp tambahan sebagai device pengirim. Setiap device perlu scan QR code untuk autentikasi.</p>
+
+                    {/* Add New Device */}
+                    <div className="flex gap-2 items-end">
+                        <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Device Baru</label>
+                            <input
+                                type="text"
+                                className="w-full p-2 border rounded text-sm text-gray-900"
+                                value={newDeviceName}
+                                onChange={(e) => setNewDeviceName(e.target.value)}
+                                placeholder="Contoh: WA Collector Andi"
+                            />
+                        </div>
+                        <button
+                            onClick={handleAddDevice}
+                            disabled={addingDevice || !newDeviceName.trim()}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 h-[38px]"
+                        >
+                            {addingDevice ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />}
+                            Tambah Device
+                        </button>
+                    </div>
+
+                    {/* Device List */}
+                    {devices.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-lg border-2 border-dashed">
+                            Belum ada device terdaftaTambahkan device untuk mulai broadcast via nomor WA lain.
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {devices.map(device => (
+                                <div key={device.id} className={`border rounded-lg p-4 ${device.status === 'CONNECTED' ? 'border-green-200 bg-green-50/30' : device.status === 'SCAN_QR' ? 'border-yellow-200 bg-yellow-50/30' : 'border-gray-200'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-3 h-3 rounded-full ${device.status === 'CONNECTED' ? 'bg-green-500' : device.status === 'SCAN_QR' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                                            <div>
+                                                <div className="font-bold text-gray-800 text-sm">{device.name}</div>
+                                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                    <span className="font-mono">{device.phone || 'Belum terhubung'}</span>
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                                        style={{
+                                                            background: device.status === 'CONNECTED' ? '#dcfce7' : device.status === 'SCAN_QR' ? '#fef9c3' : '#f3f4f6',
+                                                            color: device.status === 'CONNECTED' ? '#166534' : device.status === 'SCAN_QR' ? '#854d0e' : '#6b7280',
+                                                        }}
+                                                    >
+                                                        {device.status === 'CONNECTED' ? '✅ Connected' : device.status === 'SCAN_QR' ? '📱 Scan QR' : '❌ Disconnected'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleCheckStatus(device.id)}
+                                                disabled={checkingStatus[device.id]}
+                                                className="p-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 text-xs disabled:opacity-50"
+                                                title="Cek Status"
+                                            >
+                                                <RefreshCw size={14} className={checkingStatus[device.id] ? 'animate-spin' : ''} />
+                                            </button>
+                                            {device.status !== 'CONNECTED' && (
+                                                <button
+                                                    onClick={() => handleFetchQr(device.id)}
+                                                    disabled={loadingQr[device.id]}
+                                                    className="p-2 bg-blue-100 hover:bg-blue-200 rounded text-blue-600 text-xs disabled:opacity-50"
+                                                    title="Tampilkan QR Code"
+                                                >
+                                                    <QrCode size={14} />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDeleteDevice(device.id)}
+                                                className="p-2 bg-red-50 hover:bg-red-100 rounded text-red-600 text-xs"
+                                                title="Hapus Device"
+                                            >
+                                                <Trash size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* QR Code Display */}
+                                    {qrData[device.id] && device.status !== 'CONNECTED' && (
+                                        <div className="mt-3 pt-3 border-t text-center">
+                                            <p className="text-xs text-gray-500 font-bold mb-2">Scan QR Code ini dari WhatsApp Anda:</p>
+                                            <div className="inline-block bg-white p-4 rounded-lg border shadow-sm">
+                                                <img
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData[device.id]!)}`}
+                                                    alt="QR Code"
+                                                    className="w-48 h-48"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 mt-2">Buka WhatsApp → Linked Devices → Link a Device → Scan QR</p>
+                                            <button
+                                                onClick={() => { handleFetchQr(device.id); handleCheckStatus(device.id); }}
+                                                className="mt-2 text-xs text-blue-600 font-bold hover:underline"
+                                            >
+                                                Refresh QR / Cek Status
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {loadingQr[device.id] && (
+                                        <div className="mt-3 pt-3 border-t text-center">
+                                            <Loader size={20} className="animate-spin inline text-blue-500" />
+                                            <p className="text-xs text-gray-400 mt-1">Memuat QR Code...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Broadcast Testing Section */}

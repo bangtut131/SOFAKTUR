@@ -43,7 +43,7 @@ export const WahaService = {
         }
     },
 
-    async sendText(phone: string, message: string): Promise<{ success: boolean; error?: string }> {
+    async sendText(phone: string, message: string, sessionOverride?: string): Promise<{ success: boolean; error?: string }> {
         if (!phone) return { success: false, error: "No phone number provided" };
 
         const config = await this.getConfig();
@@ -57,19 +57,21 @@ export const WahaService = {
             formattedPhone += '@c.us';
         }
 
+        const useSession = sessionOverride || config.sessionId;
+
         try {
             const headers: any = {
                 'Content-Type': 'application/json',
             };
             if (config.apiKey) headers['X-Api-Key'] = config.apiKey;
 
-            console.log(`Sending WAHA message to ${config.baseUrl}/api/sendText session=${config.sessionId}`);
+            console.log(`Sending WAHA message to ${config.baseUrl}/api/sendText session=${useSession}`);
 
             const res = await fetch(`${config.baseUrl}/api/sendText`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                    session: config.sessionId,
+                    session: useSession,
                     chatId: formattedPhone,
                     text: message,
                 }),
