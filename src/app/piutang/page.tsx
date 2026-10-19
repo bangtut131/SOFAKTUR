@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, RefreshCw, Send, Settings, History, X, Phone, Ban, CheckCircle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Send, Settings, History, X, Phone, Ban, CheckCircle, FileDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TableVirtuoso } from "react-virtuoso";
+import * as XLSX from "xlsx";
 
 interface Branch { id: string; name: string }
 
@@ -152,6 +153,58 @@ export default function PiutangPage() {
         router.push('/broadcast');
     };
 
+    const handleExportExcel = () => {
+        if (!customers || customers.length === 0) return;
+
+        const wb = XLSX.utils.book_new();
+        const now = new Date();
+        const tanggal = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        // ── Sheet 1: Ringkasan per Customer ──
+        const ringkasanData = customers.map((c, idx) => ({
+            'No': idx + 1,
+            'Nama Customer': c.name,
+            'No HP': c.phone || '-',
+            'Jumlah Invoice': c.invoices?.length || 0,
+            'Total Tagihan (Rp)': c.totalOwing,
+            'Status Broadcast': blacklistedIds.has(c.id) ? 'Exclude Broadcast' : 'Aktif',
+        }));
+        const ws1 = XLSX.utils.json_to_sheet(ringkasanData);
+        ws1['!cols'] = [
+            { wch: 5 }, { wch: 35 }, { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 20 }
+        ];
+        XLSX.utils.book_append_sheet(wb, ws1, 'Ringkasan');
+
+        // ── Sheet 2: Detail per Invoice ──
+        const detailData: any[] = [];
+        customers.forEach(c => {
+            (c.invoices || []).forEach((inv: any) => {
+                const age = Math.floor((now.getTime() - new Date(inv.transDate).getTime()) / (1000 * 60 * 60 * 24));
+                const overdue = Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+                detailData.push({
+                    'Nama Customer': c.name,
+                    'No HP': c.phone || '-',
+                    'No Invoice': inv.transNo,
+                    'Tgl Transaksi': new Date(inv.transDate).toLocaleDateString('id-ID'),
+                    'Jatuh Tempo': new Date(inv.dueDate).toLocaleDateString('id-ID'),
+                    'Umur (Hari)': age,
+                    'Overdue (Hari)': overdue > 0 ? overdue : 0,
+                    'Status': overdue > 0 ? 'Overdue' : 'Belum Jatuh Tempo',
+                    'Outstanding (Rp)': inv.outstanding,
+                });
+            });
+        });
+        const ws2 = XLSX.utils.json_to_sheet(detailData);
+        ws2['!cols'] = [
+            { wch: 35 }, { wch: 18 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
+            { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 20 }
+        ];
+        XLSX.utils.book_append_sheet(wb, ws2, 'Detail Invoice');
+
+        const filename = `Piutang_${tanggal.replace(/ /g, '_')}.xlsx`;
+        XLSX.writeFile(wb, filename);
+    };
+
     const handleOpenBlacklistModal = (c: CustomerData) => {
         setBlacklistTarget(c);
         setBlacklistReason('');
@@ -197,6 +250,13 @@ export default function PiutangPage() {
                         className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 flex items-center gap-2"
                     >
                         <History size={16} /> History
+                    </button>
+                    <button
+                        onClick={handleExportExcel}
+                        disabled={customers.length === 0}
+                        className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-lg font-bold text-sm hover:bg-green-100 flex items-center gap-2 disabled:opacity-40"
+                    >
+                        <FileDown size={16} /> Export Excel
                     </button>
                     {!isStaff && (
                         <>
