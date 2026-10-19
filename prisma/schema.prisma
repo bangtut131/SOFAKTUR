@@ -84,7 +84,8 @@ model Customer {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  receivables   Receivable[]
+  receivables       Receivable[]
+  blacklistEntries  PiutangBlacklist[]
 }
 
 model Receivable {
@@ -206,4 +207,20 @@ model MonitorReturn {
   @@index([syncedAt])
   @@index([customerName])
   @@index([transNo])
+}
+
+model PiutangBlacklist {
+  id          String    @id @default(cuid())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reason      String?   // Alasan blacklist (opsional)
+  status      String    @default("ACTIVE") // ACTIVE = dikecualikan, INACTIVE = sudah diwhitelist
+  addedBy     String    // Username yang menambahkan ke blacklist
+  createdAt   DateTime  @default(now())
+  removedBy   String?   // Username yang mewhitelist
+  removedAt   DateTime? // Kapan diwhitelist
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
 }

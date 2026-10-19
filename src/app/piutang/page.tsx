@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, RefreshCw, Send, Settings, History, X, Phone } from "lucide-react";
+import { ArrowLeft, RefreshCw, Send, Settings, History, X, Phone, Ban, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TableVirtuoso } from "react-virtuoso";
 
@@ -40,6 +40,15 @@ export default function PiutangPage() {
     const [showDetail, setShowDetail] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
 
+    // Blacklist state
+    const [blacklistedIds, setBlacklistedIds] = useState<Set<string>>(new Set());
+
+    // Modal: Blacklist confirmation
+    const [showBlacklistModal, setShowBlacklistModal] = useState(false);
+    const [blacklistTarget, setBlacklistTarget] = useState<CustomerData | null>(null);
+    const [blacklistReason, setBlacklistReason] = useState('');
+    const [blacklistLoading, setBlacklistLoading] = useState(false);
+
     // Fetch branches
     useEffect(() => {
         const fetchBranches = async () => {
@@ -59,6 +68,7 @@ export default function PiutangPage() {
     // Load Data when Branch Changes
     useEffect(() => {
         fetchStoredData();
+        fetchBlacklist();
     }, [selectedBranch]);
 
     const fetchStoredData = async () => {
@@ -76,6 +86,16 @@ export default function PiutangPage() {
         } catch (error) {
             console.error("Failed to load stored piutang data", error);
         }
+    };
+
+    const fetchBlacklist = async () => {
+        try {
+            const res = await fetch('/api/piutang/blacklist?activeOnly=true');
+            if (res.ok) {
+                const data = await res.json();
+                setBlacklistedIds(new Set(data.activeIds || []));
+            }
+        } catch (e) { console.error("Failed to load blacklist", e); }
     };
 
     const fetchFromAccurate = async () => {
@@ -132,6 +152,31 @@ export default function PiutangPage() {
         router.push('/broadcast');
     };
 
+    const handleOpenBlacklistModal = (c: CustomerData) => {
+        setBlacklistTarget(c);
+        setBlacklistReason('');
+        setShowBlacklistModal(true);
+    };
+
+    const handleAddBlacklist = async () => {
+        if (!blacklistTarget) return;
+        setBlacklistLoading(true);
+        try {
+            const res = await fetch('/api/piutang/blacklist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerId: blacklistTarget.id, reason: blacklistReason || null })
+            });
+            if (res.ok) {
+                setShowBlacklistModal(false);
+                setBlacklistTarget(null);
+                fetchBlacklist();
+            }
+        } catch (e) { console.error(e); } finally {
+            setBlacklistLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <header className="bg-white p-4 shadow-sm border-b shrink-0 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -154,12 +199,23 @@ export default function PiutangPage() {
                         <History size={16} /> History
                     </button>
                     {!isStaff && (
-                        <button
-                            onClick={() => router.push('/piutang/settings')}
-                            className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 flex items-center gap-2"
-                        >
-                            <Settings size={16} /> Settings
-                        </button>
+                        <>
+                            <button
+                                onClick={() => router.push('/piutang/blacklist')}
+                                className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-100 flex items-center gap-2"
+                            >
+                                <Ban size={16} /> Blacklist
+                                {blacklistedIds.size > 0 && (
+                                    <span className="bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">{blacklistedIds.size}</span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => router.push('/piutang/settings')}
+                                className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 flex items-center gap-2"
+                            >
+                                <Settings size={16} /> Settings
+                            </button>
+                        </>
                     )}
                 </div>
             </header>
@@ -257,34 +313,54 @@ export default function PiutangPage() {
                                     ))}
                                 </tr>
                             )}
-                            itemContent={(index, c) => (
-                                <>
-                                    <td className="p-4 font-bold text-gray-800" style={{ width: 300 }}>
-                                        {c.name}
-                                        <div className="text-xs text-gray-400 font-normal lg:hidden">{c.phone || '-'}</div>
-                                    </td>
-                                    <td className="p-4 text-gray-600 hidden lg:table-cell" style={{ width: 150 }}>
-                                        {c.phone ? (
-                                            <div className="flex items-center gap-2">
-                                                <Phone size={14} className="text-green-600" />
-                                                {c.phone}
+                            itemContent={(index, c) => {
+                                const isBlacklisted = blacklistedIds.has(c.id);
+                                return (
+                                    <>
+                                        <td className={`p-4 font-bold ${isBlacklisted ? 'text-gray-400' : 'text-gray-800'}`} style={{ width: 300 }}>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {c.name}
+                                                {isBlacklisted && (
+                                                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                                                        <Ban size={10} /> Exclude Broadcast
+                                                    </span>
+                                                )}
                                             </div>
-                                        ) : '-'}
-                                    </td>
-                                    <td className="p-4 text-center font-mono" style={{ width: 120 }}>{c.invoices?.length || 0}</td>
-                                    <td className="p-4 text-right font-mono font-bold text-red-600" style={{ width: 180 }}>
-                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(c.totalOwing)}
-                                    </td>
-                                    <td className="p-4 text-right" style={{ width: 100 }}>
-                                        <button
-                                            onClick={() => handleShowDetail(c)}
-                                            className="text-blue-600 hover:underline text-xs font-bold"
-                                        >
-                                            Detail
-                                        </button>
-                                    </td>
-                                </>
-                            )}
+                                            <div className="text-xs text-gray-400 font-normal lg:hidden">{c.phone || '-'}</div>
+                                        </td>
+                                        <td className="p-4 text-gray-600 hidden lg:table-cell" style={{ width: 150 }}>
+                                            {c.phone ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Phone size={14} className="text-green-600" />
+                                                    {c.phone}
+                                                </div>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="p-4 text-center font-mono" style={{ width: 120 }}>{c.invoices?.length || 0}</td>
+                                        <td className={`p-4 text-right font-mono font-bold ${isBlacklisted ? 'text-gray-400' : 'text-red-600'}`} style={{ width: 180 }}>
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(c.totalOwing)}
+                                        </td>
+                                        <td className="p-4 text-right" style={{ width: 100 }}>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <button
+                                                    onClick={() => handleShowDetail(c)}
+                                                    className="text-blue-600 hover:underline text-xs font-bold"
+                                                >
+                                                    Detail
+                                                </button>
+                                                {!isStaff && !isBlacklisted && (
+                                                    <button
+                                                        onClick={() => handleOpenBlacklistModal(c)}
+                                                        className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"
+                                                    >
+                                                        <Ban size={11} /> Blacklist
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </>
+                                );
+                            }}
                         />
                     </div>
                 </div>
@@ -352,6 +428,46 @@ export default function PiutangPage() {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal: Blacklist Confirmation */}
+            {showBlacklistModal && blacklistTarget && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                        <div className="p-4 border-b flex items-center gap-2">
+                            <Ban className="text-red-600" size={20} />
+                            <h2 className="text-lg font-bold text-gray-800">Blacklist Customer</h2>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <p className="text-gray-700">
+                                Tambahkan <strong>{blacklistTarget.name}</strong> ke daftar blacklist?
+                                Customer ini tidak akan menerima broadcast WhatsApp meskipun punya piutang aktif.
+                            </p>
+                            <div>
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Alasan <span className="font-normal text-gray-400">(opsional)</span></label>
+                                <textarea
+                                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm"
+                                    rows={3}
+                                    placeholder="Contoh: Piutang dalam sengketa, Sudah lunas di luar sistem..."
+                                    value={blacklistReason}
+                                    onChange={e => setBlacklistReason(e.target.value)}
+                                />
+                            </div>
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
+                                ⚠️ Untuk mengembalikan, buka menu <strong>Blacklist</strong> dan klik <strong>Whitelist</strong>.
+                            </div>
+                        </div>
+                        <div className="p-4 border-t flex gap-2 justify-end">
+                            <button onClick={() => { setShowBlacklistModal(false); setBlacklistTarget(null); }} className="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-100 font-medium text-sm">Batal</button>
+                            <button
+                                onClick={handleAddBlacklist}
+                                disabled={blacklistLoading}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <Ban size={14} /> {blacklistLoading ? 'Menyimpan...' : 'Blacklist Sekarang'}
+                            </button>
                         </div>
                     </div>
                 </div>

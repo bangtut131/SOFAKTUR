@@ -369,6 +369,13 @@ export const SchedulerService = {
         if (!schedule || !schedule.isEnabled || !schedule.messageTemplate) return;
         await prisma.broadcastSchedule.update({ where: { id: scheduleId }, data: { lastRun: new Date() } });
 
+        // Fetch active blacklisted customer IDs
+        const blacklistEntries = await prisma.piutangBlacklist.findMany({
+            where: { status: 'ACTIVE' },
+            select: { customerId: true, customer: { select: { name: true } } }
+        });
+        const blacklistedIds = new Set(blacklistEntries.map(e => e.customerId));
+
         const customers = await prisma.customer.findMany({
             where: { NOT: [{ phone: null }, { phone: "" }], receivables: { some: { status: 'OPEN', outstanding: { gt: 0 } } } },
             include: { receivables: { where: { status: 'OPEN', outstanding: { gt: 0 } } } }
@@ -378,6 +385,23 @@ export const SchedulerService = {
         const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
         for (const cust of customers) {
+            // Skip customers that are blacklisted
+            if (blacklistedIds.has(cust.id)) {
+                await prisma.broadcastLog.create({
+                    data: {
+                        customerId: cust.id,
+                        customerName: cust.name,
+                        phone: cust.phone!,
+                        message: '-',
+                        status: 'SKIPPED',
+                        error: 'Customer masuk daftar blacklist (Exclude Broadcast)',
+                        source: 'SYSTEM'
+                    }
+                });
+                console.log(`[BROADCAST] Skipped blacklisted customer: ${cust.name}`);
+                continue;
+            }
+
             // Filter invoices based on schedule settings
             const eligibleReceivables = cust.receivables.filter(r => {
                 const daysSinceTrans = Math.floor((today.getTime() - new Date(r.transDate).getTime()) / MS_PER_DAY);
