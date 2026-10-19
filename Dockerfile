@@ -38,8 +38,8 @@ ENV ACCURATE_DB_ID=$ACCURATE_DB_ID
 ENV ACCURATE_API_HOST=$ACCURATE_API_HOST
 ENV NODE_ENV=production
 
-# Build: runs prisma db push + seed + next build
-RUN npm run build
+# Build: only generate Prisma client + build Next.js (no DB changes during build)
+RUN npx prisma generate && next build
 
 EXPOSE 3000
 ENV PORT=3000
